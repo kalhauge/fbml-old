@@ -1,0 +1,24 @@
+<!DOCTYPE fbml
+[
+<!ELEMENT fbml (import*,method*,impl*)>
+<!ELEMENT import EMPTY>
+<!ELEMENT method EMPTY>
+<!ELEMENT impl (function*)>
+<!ELEMENT function (source|sink)+>
+<!ELEMENT source EMPTY>
+<!ELEMENT sink EMPTY>
+
+<!ATTLIST fbml version CDATA #FIXED "0.0x">
+<!ATTLIST import version CDATA #REQUIRED>
+<!ATTLIST method id CDATA #REQUIRED>
+<!ATTLIST impl method_id CDATA #REQUIRED>
+<!ATTLIST function id CDATA #REQUIRED>
+<!ATTLIST sink 
+   id CDATA #REQUIRED
+   slot CDATA #REQUIRED
+>
+<!ATTLIST source
+   sink_id CDATA #REQUIRED
+   slot CDATA #REQUIRED
+>
+]>

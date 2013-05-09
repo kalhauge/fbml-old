@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!DOCTYPE fbml SYSTEM "../doctypes/fbml-noext.dtd">
+<fbml version="0.0x">
+   <method id="m1" />
+   <impl method_id="m1">
+      <function id="c1">
+         <sink id="n1" number="0"/>
+      </function>
+
+      <function id="c2">
+         <sink id="n2" number="0"/>
+      </function>
+      
+      <function id="add"> 
+         <source sink_id="n1" number="0"/>
+         <source sink_id="n2" number="1"/>
+         <sink id="n3" number="0"/>
+      </function>
+      
+      <function id="print">
+         <source sink_id="in" number="0"/>
+         <source sink_id="n3" number="1"/>
+         <sink id="out" number="0"/>
+      </function>
+   </impl> 
+</fbml>
