@@ -7,8 +7,9 @@ and produces dot code.
 
 # Lets start out by importing pyflow 
 import sys
-sys.path.append('/Users/christian/Develop/Projects/2013/FlowLang');
-import pyflow 
+sys.path.append('/Users/christian/Develop/Projects/2013/fbml/lib');
+
+import pyfbml 
 import argparse
 
 def fail(msg):
@@ -18,14 +19,10 @@ def fail(msg):
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('filename',help='the file to compile');
+parser.add_argument('method_name',help='the method to print');
 
 args = parser.parse_args();
 
-try: flow = pyflow.parse(args.filename);
-except pyflow.FlowParseError as error:
-    fail(error.getMessage());
+flow = pyfbml.parseFlow(args.filename);
 
-try: main = flow.getMethodFromId('main').getLattice();
-except pyflow.FlowError as e: fail(e)
-else:
-    pass;
+print(flow.getMethod(args.method_name));
