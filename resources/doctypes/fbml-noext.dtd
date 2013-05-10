@@ -4,7 +4,7 @@
 <!ELEMENT import CDATA>
 <!ATTLIST import version CDATA #REQUIRED>
 >
-<!ELEMENT method EMPTY>
+<!ELEMENT method (slot|sink)+>
 <!ELEMENT impl (function*)>
 <!ELEMENT function (source|sink)+>
 <!ELEMENT source EMPTY>

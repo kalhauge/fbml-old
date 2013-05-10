@@ -25,4 +25,6 @@ args = parser.parse_args();
 
 flow = pyfbml.parseFlow(args.filename);
 
-print(flow.getMethod(args.method_name));
+method = flow.getMethod(args.method_name);
+print(method)
+print(method.getImpl());

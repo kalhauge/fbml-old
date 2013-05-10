@@ -1,10 +1,24 @@
-
 from __init__ import MallformedFlowError;
+
+
+def getSinks(root):
+    from flow import Sink
+    sinks = dict();
+    for sink_root in root.iter('sink'):
+        sink_id = sink_root.attrib['id'];
+        if sink_id in sinks: raise MallformedFlowError(); 
+        sinks[sink_id] = Sink(sink_id);
+    return sinks;
 
 def sortSlotList(slot_list):
     l = [None] * len(slot_list);
     for i,s in slot_list:
-        if s > len(l) or s < 0: raise MallformedFlowError();
+        s = int(s)
+        if s > len(l) or s < 0: 
+            raise MallformedFlowError(
+                    "Slot id is {} should in the range [0,{}[".format(
+                        s,len(l))
+                    );
         l[s] = i;
     return l;
 
@@ -35,8 +49,19 @@ class FlowParser (object):
 
     def addMethodTree(self,tree):
         from flow import Method
-        self._methods[tree.attrib['id']] = Method(tree.attrib['id']);
-        pass
+        method_id = tree.attrib['id'];
+
+        sources = sortSlotList(
+                [(sid.attrib['id'],sid.attrib['slot'])
+                    for sid in tree.findall('source')]
+                );
+    
+        sinks = sortSlotList(
+                [(sid.attrib['id'],sid.attrib['slot']) 
+                    for sid in tree.findall('sink')]
+                );
+        print(sinks,sources)
+        self._methods[method_id] = Method(method_id,sources,sinks);
 
     def addImplTree(self,root):
         from flow import Impl, Sink, Source, Function
@@ -45,28 +70,25 @@ class FlowParser (object):
         if not method_id in self._methods: raise MallformedFlowError();
         else: method = self._methods[method_id];
 
-        sinks = [];
-        for sink_root in root.iter('sink'):
-            sink_id = sink_root.attrib['id'];
-            if sink_id in sinks: raise MallformedFlowError(); 
-            sinks[sink_id] = Sink(sink_id);
+        sinks = getSinks(root);
+
+        for source_id  in method.getSources():
+            sinks[source_id] = Sink(source_id);
 
         functions = []
-        for function in root.forall('function'):
-            sinks = sortSlotList(
+        for function in root.findall('function'):
+            f_sinks = sortSlotList(
                         [(sinks[sid.attrib['id']],sid.attrib['slot']) 
-                            for sid in function.forall('sinks')]
+                            for sid in function.findall('sink')]
                         );
-            function_sinks.extend(sinks);
             sources = sortSlotList(
-                        [(Source(sinks[sid.attrib['id']]),sid.attrib['slot'])
-                            for sid in function.forall('sinks')]
+                        [(Source(sinks[sid.attrib['sink_id']]),sid.attrib['slot'])
+                            for sid in function.findall('source')]
                         );
-
-            function = Function(function.attrib('id'),sinks,sources);
+            function = Function(function.attrib['id'],sources,f_sinks);
             functions.append(function);
         
-        method.addImpl(Impl(functions,function_sinks));
+        method.addImpl(Impl(method,functions,sinks));
 
 
             
