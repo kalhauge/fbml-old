@@ -55,7 +55,7 @@ class DotVisitor (pyfbml.Visitor):
                         for s in function.getSources()]);
         out_str = "|".join(["<sink_{}>".format(s.getId()) 
                         for s in function.getSinks()]);
-        function_str= '{}[label="{{{}}}"];'.format(
+        function_str= '{} [label="{{{}}}"];'.format(
             function.getId(),
             '{} {} {}'.format(
                '{{{}}} |'.format(in_str) if not in_str is '' else '',
@@ -91,10 +91,10 @@ print '  ' + '\n  '.join(DotVisitor().visit(impl));
 
 for sid in method.getSinks():
     sink = impl.getSink(sid)
-    print 'OUT_{} [label = "{}"];'.format(
+    print '  OUT_{} [label = "{}"];'.format(
             sink.getId(),
             sink.getId())
-    print '"{}":{} -> "OUT_{}";'.format(
+    print '  "{}":sink_{} -> "OUT_{}";'.format(
             sink.getFunction().getId(),
             sink.getId(),
             sink.getId());
