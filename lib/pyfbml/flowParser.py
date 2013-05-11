@@ -60,7 +60,6 @@ class FlowParser (object):
                 [(sid.attrib['id'],sid.attrib['slot']) 
                     for sid in tree.findall('sink')]
                 );
-        print(sinks,sources)
         self._methods[method_id] = Method(method_id,sources,sinks);
 
     def addImplTree(self,root):
@@ -71,7 +70,6 @@ class FlowParser (object):
         else: method = self._methods[method_id];
 
         sinks = getSinks(root);
-
         for source_id  in method.getSources():
             sinks[source_id] = Sink(source_id);
 

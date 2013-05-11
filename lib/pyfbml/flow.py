@@ -15,7 +15,6 @@ class Flow (object):
         from flowparser import FlowParser
         return FlowParser(filename).createFlow();
 
-
 class Method (object):
     def __init__(self,ID,sources,sinks):
         self._id = ID;
@@ -35,6 +34,9 @@ class Method (object):
     def getSources(self):
         return self._sources
 
+    def getSinks(self):
+        return self._sinks
+
     def addImpl(self, impl):
         self._impl = impl;
 
@@ -53,6 +55,16 @@ class Impl (object):
                 len(self._functions),
                 len(self._sinks))
 
+
+    def getSink(self,sid):
+        return self._sinks[sid]
+
+    def getFunctions(self):
+        return self._functions
+
+    def getMethod(self):
+        return self._method
+
 class Function (object):
     def __init__(self,sid,sources,sinks):
         self._id = sid;
@@ -66,25 +78,79 @@ class Function (object):
         for i,source in enumerate(self._sources):
             source.addFunction(self,i);
 
+    def getSources(self):
+        return self._sources;
+
+    def getSinks(self):
+        return self._sinks;
+
+    def getId(self):
+        return self._id;
+
+    def __repr__(self):
+        return '<function id="{}" >'.format(self._id);
+
+    def depth(self,helper):
+        if not self in helper:
+            if len(self.getSources()) == 0: depth = 0;
+            else: depth = max(src.depth(helper) for src in self.getSources()) +1
+            helper[self] = depth;
+        return helper[self]
+
 class Sink (object):
     def __init__(self,sid):
         self._id = sid;
         self._function = None
         self._slot = None
+        self._users = [];
     
     def addFunction(self,function,slot):
         self._function = function;
         self._slot = slot;
 
+    def getFunction(self):
+        return self._function;
+
     def __repr__(self):
         return '<sink id="'+self._id+'">'
+
+    def getId(self):
+        return self._id
+
+    def addUser(self,source):
+        self._users.append(source);
+
+    def getUsers(self):
+        return self._users;
+
+    def depth(self,helper):
+        if not self in helper:
+            if self.getFunction() is None: depth = 0;
+            else: depth = self.getFunction().depth(helper) + 1;
+            helper[self] = depth;
+        return helper[self]
+
+
 class Source (object):
     def __init__(self,sink):
         self._sink = sink;
+        sink.addUser(self);
 
     def addFunction(self,function,slot):
         self._function = function;
         self._slot = slot;
 
+    def getSink(self):
+        return self._sink;
+
+    def getFunction(self):
+        return self._function
+
     def __repr__(self):
-        return '<source sink="'+self._sink+'">'
+        return '<source sink={} > '.format(self._sink);
+
+    def depth(self,helper):
+        if not self in helper:
+            helper[self] = self.getSink().depth(helper) + 1;
+        return helper[self]
+

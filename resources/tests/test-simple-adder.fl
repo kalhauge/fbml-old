@@ -16,13 +16,13 @@
          <sink id="n2" slot="0"/>
       </function>
       
-      <function id="add"> 
+      <function id="f_add"> 
          <source sink_id="n1" slot="0"/>
          <source sink_id="n2" slot="1"/>
          <sink id="n3" slot="0"/>
       </function>
       
-      <function id="print">
+      <function id="f_print">
          <source sink_id="in" slot="0"/>
          <source sink_id="n3" slot="1"/>
          <sink id="out" slot="0"/>
