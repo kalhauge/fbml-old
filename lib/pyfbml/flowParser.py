@@ -23,24 +23,33 @@ def sortSlotList(slot_list):
     return l;
 
 class FlowParser (object):
-    def __init__(self,filename):
-        import xml.etree.ElementTree as ET
+    def __init__(self,filename,extensions):
+        self._extensions = extensions;
         self._filename = filename;
         self._methods = dict()
         self._impls = dict()
-        self.addFlowTree(ET.parse(filename));
+       
 
     def createFlow(self):
         from flow import Flow
+        import xml.etree.ElementTree as ET
+        self.addFlowTree(ET.parse(self._filename));
         return Flow(self._methods,self._impls)
 
     def addFlowTree(self,tree):
         import xml.etree.ElementTree as ET
         root = tree.getroot();
-        
+
+        for extension in root.findall('extension'):
+            if not extension.attrib['name'] in self._extensions:
+                raise MallformedFlowError(
+                        "Should contain the {} extension".format(
+                            extension.attrib['name']
+                            ))
+
         for im in root.findall('import'):
-            self.addFlowTree(ET.parse(im.text));
-        
+            self.addFlowTree(ET.parse(im.text)); 
+
         for method in root.findall('method'):
             self.addMethodTree(method);
 
@@ -50,18 +59,23 @@ class FlowParser (object):
     def addMethodTree(self,tree):
         from flow import Method
         method_id = tree.attrib['id'];
-
+        
         sources = sortSlotList(
                 [(sid.attrib['id'],sid.attrib['slot'])
                     for sid in tree.findall('source')]
                 );
-    
+       
         sinks = sortSlotList(
                 [(sid.attrib['id'],sid.attrib['slot']) 
                     for sid in tree.findall('sink')]
                 );
-        self._methods[method_id] = Method(method_id,sources,sinks);
+    
+        method = Method(method_id,sources,sinks);
+        self._methods[method_id] = method;
 
+        for ext in tree.findall('extend'):
+            self._extensions[ext.attrib['name']].parseExt(ext,method);
+                    
     def addImplTree(self,root):
         from flow import Impl, Sink, Source, Function
 
@@ -73,21 +87,25 @@ class FlowParser (object):
         for source_id  in method.getSources():
             sinks[source_id] = Sink(source_id);
 
-        functions = []
+        functions = dict()
         for function in root.findall('function'):
             f_sinks = sortSlotList(
                         [(sinks[sid.attrib['id']],sid.attrib['slot']) 
                             for sid in function.findall('sink')]
                         );
             sources = sortSlotList(
-                        [(Source(sinks[sid.attrib['sink_id']]),sid.attrib['slot'])
+                        [(Source(sinks[sid.attrib['sink_id']]),
+                            sid.attrib['slot'])
                             for sid in function.findall('source')]
                         );
             function = Function(function.attrib['id'],sources,f_sinks);
-            functions.append(function);
+            functions[function.getId()] = function;
         
         method.addImpl(Impl(method,functions,sinks));
 
+        t = {'function' : functions, 'sink' : sinks}
 
-            
-        
+        for ext in root.findall('extend'):
+            self._extensions[ext.attrib['name']].parseExt(
+                    ext,t[ext.attrib['type']][ext.attrib['id']]);
+

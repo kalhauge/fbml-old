@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 <!DOCTYPE fbml SYSTEM "../doctypes/fbml-noext.dtd">
 <fbml version="0.0">
-   
+   <extension name="MethodName"/>
    <method id="m1">
+      <extend name="MethodName" type="method" id="m1">Main</extend>
       <source id="in" slot="0"/>
       <sink id="out" slot="0"/>
    </method>
@@ -27,5 +28,11 @@
          <source sink_id="n3" slot="1"/>
          <sink id="out" slot="0"/>
       </function>
+
+      <extend name="MethodName" type="function" id="c1">constant</extend>
+      <extend name="MethodName" type="function" id="c2">constant</extend>
+      <extend name="MethodName" type="function" id="f_add">Add</extend>
+      <extend name="MethodName" type="function" id="f_print">Print</extend>
+
    </impl> 
 </fbml>

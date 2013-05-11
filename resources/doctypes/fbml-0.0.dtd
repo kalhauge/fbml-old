@@ -6,16 +6,22 @@
 <!ELEMENT import CDATA>
 <!ATTLIST import version CDATA #REQUIRED>
 
-<!ELEMENT method (slot|sink)+>
+<!ELEMENT method (slot|sink|extend)+>
 <!ATTLIST method id CDATA #REQUIRED>
 
-<!ELEMENT impl (function*)>
+<!ELEMENT impl (function+,extend*)>
 <!ATTLIST impl method_id CDATA #REQUIRED>
 
 <!ELEMENT extension EMPTY>
 <!ATTLIST extension name CDATA #REQUIRED>
 
-<!ELEMENT function (source|sink)+>
+<!ELEMENT extend (PCDATA)>
+<!ATTLIST extend
+   name    CDATA #REQUIRED
+   type    ENTITY #IMPLIED
+   id      CDATA #IMPLIED
+>
+<!ELEMENT function (source|sink|extend)+>
 <!ATTLIST function id CDATA #REQUIRED>
 
 <!ELEMENT source EMPTY>
@@ -24,7 +30,7 @@
    slot CDATA #REQUIRED
 >
 
-<!ELEMENT sink EMPTY>
+<!ELEMENT sink (extend)*>
 <!ATTLIST sink 
    id CDATA #REQUIRED
    slot CDATA #REQUIRED

@@ -1,19 +1,48 @@
 """
 Module: Flow
 """
-
+from __init__ import MallformedFlowError;
 
 class Flow (object):
-    def __init__(self,methods,impls):
+    def __init__(self,methods,extensions):
         self._methods = methods
+        self._extensions = extensions
 
     def getMethod(self,ID):
         return self._methods[ID];
 
+    def getExtension(self,name):
+        return self._extensions[name];
+    
     @staticmethod
     def parse(filename):
         from flowparser import FlowParser
         return FlowParser(filename).createFlow();
+
+class Extension (object):
+    def __init__(self):
+        self._data = dict()
+    
+    def setName(self,name):
+        self._name = name
+
+    def getName(self):
+        return self._name
+
+    def parseExt(self,ext,obj):
+        if ext.attrib['type'] != obj.getType():
+            raise MallformedFlowError(
+                    "Type {} different from {}".format(
+                        ext.attrib['type'], obj));
+        self.parseExtension(ext,obj);
+
+    def set(self,obj,data):
+        self._data[obj] = data;
+
+    def get(self,obj):
+        try: return self._data[obj]
+        except KeyError as e:
+            raise MallformedFlowError("No extendsion data for " + str(obj))
 
 class Method (object):
     def __init__(self,ID,sources,sinks):
@@ -42,6 +71,8 @@ class Method (object):
 
     def getImpl(self):
         return self._impl;
+
+    def getType(self): return "method"
 
 class Impl (object):
     def __init__(self,method,functions,sinks):
@@ -97,6 +128,8 @@ class Function (object):
             helper[self] = depth;
         return helper[self]
 
+    def getType(self): return "function"
+
 class Sink (object):
     def __init__(self,sid):
         self._id = sid;
@@ -130,6 +163,7 @@ class Sink (object):
             helper[self] = depth;
         return helper[self]
 
+    def getType(self): return "sink"
 
 class Source (object):
     def __init__(self,sink):

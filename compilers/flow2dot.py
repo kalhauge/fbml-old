@@ -2,14 +2,18 @@
 Compiler : flow2dot 
 
 This is the simple flow to dot compiler wich takes a .fl file
-and produces dot code. 
+and produces dot code.
+
+Need extensions:
+    MethodName
 """
 
 # Lets start out by importing pyflow 
 import sys
 sys.path.append('/Users/christian/Develop/Projects/2013/fbml/lib');
 
-import pyfbml 
+import pyfbml
+from pyfbml.extensions import MethodNameExtension
 import argparse
 
 def fail(msg):
@@ -23,7 +27,9 @@ parser.add_argument('method_name',help='the method to print');
 
 args = parser.parse_args();
 
-flow = pyfbml.parseFlow(args.filename);
+ext = pyfbml.getExtensions('MethodName');                
+
+flow = pyfbml.parseFlow(args.filename,ext);
 
 method = flow.getMethod(args.method_name);
 impl = method.getImpl();
@@ -50,7 +56,7 @@ class DotVisitor (pyfbml.Visitor):
             function.getId(),
             '{} {} {}'.format(
                '{{{}}} |'.format(in_str) if not in_str is '' else '',
-               function.getId(),
+               ext['MethodName'].get(function),
                '| {{{}}}'.format(out_str) if not out_str is '' else '',
                )
             )
