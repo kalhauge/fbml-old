@@ -1,0 +1,35 @@
+<!DOCTYPE fbml
+[
+<!ELEMENT fbml (import*,method*,impl*,extension)>
+<!ATTLIST fbml version CDATA #FIXED "0.0">
+
+<!ELEMENT import CDATA>
+<!ATTLIST import version CDATA #REQUIRED>
+
+<!ELEMENT method (slot|sink)+>
+<!ATTLIST method id CDATA #REQUIRED>
+
+<!ELEMENT impl (function*)>
+<!ATTLIST impl method_id CDATA #REQUIRED>
+
+<!ELEMENT extension EMPTY>
+<!ATTLIST extension name CDATA #REQUIRED>
+
+<!ELEMENT function (source|sink)+>
+<!ATTLIST function id CDATA #REQUIRED>
+
+<!ELEMENT source EMPTY>
+<!ATTLIST source
+   sink_id CDATA #REQUIRED
+   slot CDATA #REQUIRED
+>
+
+<!ELEMENT sink EMPTY>
+<!ATTLIST sink 
+   id CDATA #REQUIRED
+   slot CDATA #REQUIRED
+>
+
+]>
+
+
