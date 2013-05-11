@@ -38,7 +38,10 @@ class DotVisitor (pyfbml.Visitor):
     
     def setup(self,method_sources):
         for sink in method_sources:
-            self.set(sink,[]);
+            self.set(sink,['IN_{} [label="{}"];'.format(
+                sink.getId(), 
+                sink.getId())]
+                )
 
     def merge(self,sinks):
         result = [];
@@ -60,15 +63,23 @@ class DotVisitor (pyfbml.Visitor):
                '| {{{}}}'.format(out_str) if not out_str is '' else '',
                )
             )
+        
+        connections = []
+        for source in function.getSources():
+            sink = source.getSink();
+            if not sink.getFunction() is None:
+                con = '"{}":sink_{} -> "{}":source_{};'.format(
+                        sink.getFunction().getId(),
+                        sink.getId(),
+                        function.getId(),
+                        sink.getId())
+            else:
+                con = '"IN_{}" -> "{}":source_{};'.format(
+                        sink.getId(),
+                        function.getId(),
+                        sink.getId())
 
-        connections = ['"{}":sink_{} -> "{}":source_{};'.format(
-            sink.getFunction().getId(),
-            sink.getId(),
-            function.getId(),
-            sink.getId()) for sink in 
-            (source.getSink() for source in function.getSources())
-                if not sink.getFunction() is None];
-
+            connections.append(con);
 
         return self.get(function) + [function_str] + connections
 
@@ -77,5 +88,15 @@ print "digraph {"
 print "  node [shape=record,style=rounded,height=0.1];"
 from pprint import pprint
 print '  ' + '\n  '.join(DotVisitor().visit(impl));
+
+for sid in method.getSinks():
+    sink = impl.getSink(sid)
+    print 'OUT_{} [label = "{}"];'.format(
+            sink.getId(),
+            sink.getId())
+    print '"{}":{} -> "OUT_{}";'.format(
+            sink.getFunction().getId(),
+            sink.getId(),
+            sink.getId());
 print "}"
 

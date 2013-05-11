@@ -30,19 +30,18 @@ class Extension (object):
         return self._name
 
     def parseExt(self,ext,obj):
-        if ext.attrib['type'] != obj.getType():
-            raise MallformedFlowError(
-                    "Type {} different from {}".format(
-                        ext.attrib['type'], obj));
         self.parseExtension(ext,obj);
 
     def set(self,obj,data):
+        if obj in self._data:
+            raise MallformedFlowError()
         self._data[obj] = data;
 
     def get(self,obj):
         try: return self._data[obj]
         except KeyError as e:
-            raise MallformedFlowError("No extendsion data for " + str(obj))
+            raise MallformedFlowError("No extendsion data for " 
+                    + str(obj) + " in " + self.getName())
 
 class Method (object):
     def __init__(self,ID,sources,sinks):

@@ -1,4 +1,5 @@
 from __init__ import MallformedFlowError;
+from pprint import pprint
 
 
 def getSinks(root):
@@ -22,6 +23,8 @@ def sortSlotList(slot_list):
         l[s] = i;
     return l;
 
+    
+
 class FlowParser (object):
     def __init__(self,filename,extensions):
         self._extensions = extensions;
@@ -39,7 +42,6 @@ class FlowParser (object):
     def addFlowTree(self,tree):
         import xml.etree.ElementTree as ET
         root = tree.getroot();
-
         for extension in root.findall('extension'):
             if not extension.attrib['name'] in self._extensions:
                 raise MallformedFlowError(
@@ -77,7 +79,7 @@ class FlowParser (object):
             self._extensions[ext.attrib['name']].parseExt(ext,method);
                     
     def addImplTree(self,root):
-        from flow import Impl, Sink, Source, Function
+        from flow import Impl,Sink, Function
 
         method_id = root.attrib['method_id'];
         if not method_id in self._methods: raise MallformedFlowError();
@@ -88,24 +90,46 @@ class FlowParser (object):
             sinks[source_id] = Sink(source_id);
 
         functions = dict()
-        for function in root.findall('function'):
-            f_sinks = sortSlotList(
-                        [(sinks[sid.attrib['id']],sid.attrib['slot']) 
-                            for sid in function.findall('sink')]
-                        );
-            sources = sortSlotList(
-                        [(Source(sinks[sid.attrib['sink_id']]),
-                            sid.attrib['slot'])
-                            for sid in function.findall('source')]
-                        );
-            function = Function(function.attrib['id'],sources,f_sinks);
+        for t_function in root.findall('function'):
+            f_sinks = self.parseSinks(t_function,sinks);
+            f_sources = self.parseSources(t_function,sinks);
+            function = Function(t_function.attrib['id'],f_sources,f_sinks);
             functions[function.getId()] = function;
-        
+            self.addExtensions(t_function,function);
+
         method.addImpl(Impl(method,functions,sinks));
-
-        t = {'function' : functions, 'sink' : sinks}
-
+        t = {'function' : functions, 'sink' : sinks} 
         for ext in root.findall('extend'):
-            self._extensions[ext.attrib['name']].parseExt(
-                    ext,t[ext.attrib['type']][ext.attrib['id']]);
+            obj = t[ext.attrib['type']][ext.attrib['id']];
+            if ext.attrib['type'] != obj.getType():
+                raise MallformedFlowError(
+                    "Type {} different from {}".format(
+                        ext.attrib['type'], obj));
+            extension = self._extensions[ext.attrib['name']]
+            extension.parseExt(ext,obj);
+    
+    def parseSinks(self,root,sinks):
+        f_sink = [];
+        for sink in root.findall('sink'):
+            s = sinks[sink.attrib['id']];
+            self.addExtensions(sink,s);
+            f_sink.append((s,sink.attrib['slot']));
+        return sortSlotList(f_sink)
+        
+    def parseSources(self,root,sinks):
+        from flow import Source
+        f_sources = [];
+        for source in root.findall('source'):
+            s = Source(sinks[source.attrib['sink_id']]);
+            f_sources.append((s,source.attrib['slot']));
+        return sortSlotList(f_sources)
+
+    def addExtensions(self,root,obj):
+        for ext in root.findall('extend'):
+            extension = self._extensions[ext.attrib['name']]
+            extension.parseExt(ext,obj);
+            
+
+                    
+
 
