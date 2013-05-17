@@ -1,6 +1,6 @@
 from __init__ import MallformedFlowError;
 from pprint import pprint
-
+from flow import Module
 
 def getSinks(root):
     from flow import Sink
@@ -23,7 +23,6 @@ def sortSlotList(slot_list):
         l[s] = i;
     return l;
 
-    
 
 class FlowParser (object):
     def __init__(self,filename,extensions):
@@ -39,7 +38,7 @@ class FlowParser (object):
         self.addFlowTree(ET.parse(self._filename));
         return Flow(self._methods,self._impls)
 
-    def addFlowTree(self,tree):
+    def addFlowTree(self,tree,module=Module("root")):
         import xml.etree.ElementTree as ET
         root = tree.getroot();
         for extension in root.findall('extension'):
@@ -50,17 +49,18 @@ class FlowParser (object):
                             ))
 
         for im in root.findall('import'):
-            self.addFlowTree(ET.parse(im.text)); 
+            new_module = Module(im.text,module);
+            self.addFlowTree(ET.parse(new_module.getFilename()),new_module); 
 
         for method in root.findall('method'):
-            self.addMethodTree(method);
+            self.addMethodTree(method,module);
 
         for impl in root.findall('impl'):
             self.addImplTree(impl);
 
-    def addMethodTree(self,tree):
+    def addMethodTree(self,tree,module):
         from flow import Method
-        method_id = tree.attrib['id'];
+        method_id = module.getId(tree.attrib['id']) 
         
         sources = sortSlotList(
                 [(sid.attrib['id'],sid.attrib['slot'])
@@ -78,13 +78,10 @@ class FlowParser (object):
         for ext in tree.findall('extend'):
             self._extensions[ext.attrib['name']].parseExt(ext,method);
                     
-    def addImplTree(self,root):
+    def addImplTree(self,root,ex):
         from flow import Impl,Sink, Function
 
-        method_id = root.attrib['method_id'];
-        if not method_id in self._methods: raise MallformedFlowError();
-        else: method = self._methods[method_id];
-
+        method = self.getMethod(root.attrib['method_id'],ex);
         sinks = getSinks(root);
         for source_id  in method.getSources():
             sinks[source_id] = Sink(source_id);
@@ -107,7 +104,14 @@ class FlowParser (object):
                         ext.attrib['type'], obj));
             extension = self._extensions[ext.attrib['name']]
             extension.parseExt(ext,obj);
-    
+   
+    def getMethod(self,method_id,ext):
+        method_id = root.attrib['method_id'];
+        if not method_id in self._methods: raise MallformedFlowError();
+        else: method = self._methods[method_id];
+        return method
+
+
     def parseSinks(self,root,sinks):
         f_sink = [];
         for sink in root.findall('sink'):
