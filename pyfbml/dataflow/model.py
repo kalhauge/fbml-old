@@ -1,22 +1,6 @@
 """
-Module: Flow
+.. module:: fbml.dataflow.model
 """
-from __init__ import MallformedFlowError;
-
-class Module (object):
-    def __init__(self,name, parent=None):
-        self._name = name
-        self._parrent = parrent
-
-    def getId(self,name):
-        return self.getModuleName() + "." + name
-
-    def getModuleName(self):
-        if not self._parrent is None:
-            return self._name
-        else: 
-            return self._parrent + "." + self._name
-
 
 class Id (object):
     def __init__(self,module,name):
@@ -26,21 +10,27 @@ class Id (object):
     def __repr__(self):
         return "'{}'".format((module.getIname));
 
-class Flow (object):
-    def __init__(self,methods,extensions):
-        self._methods = methods
-        self._extensions = extensions
+class Module (object):
+    def __init__(self,name,parent=None):
+        self._extensions = [] 
+        self._methods = []
+        self._name = name
+        self._parrent = parrent
 
     def getMethod(self,ID):
         return self._methods[ID];
 
     def getExtension(self,name):
         return self._extensions[name];
-    
-    @staticmethod
-    def parse(filename):
-        from flowparser import FlowParser
-        return FlowParser(filename).createFlow();
+
+    def getId(self,name):
+        return self.getModuleName() + "." + name
+
+    def getModuleName(self):
+        if not self._parrent is None:
+            return self._name
+        else: 
+            return self._parrent + "." + self._name
 
 class Extension (object):
     def __init__(self):

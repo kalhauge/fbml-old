@@ -1,3 +1,4 @@
+#!env python
 """
 Compiler : flow2dot 
 
@@ -8,13 +9,12 @@ Need extensions:
     MethodName
 """
 
-# Lets start out by importing pyflow 
+
+import argparse
 import sys
-sys.path.append('/Users/christian/Develop/Projects/2013/fbml/lib');
 
 import pyfbml
 from pyfbml.extensions import MethodNameExtension
-import argparse
 
 def fail(msg):
     import sys;
@@ -22,8 +22,7 @@ def fail(msg):
     sys.exit(-1);
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('filename',help='the file to compile');
-parser.add_argument('method_name',help='the method to print');
+parser.add_argument('modulename',help='the name of the module');
 
 args = parser.parse_args();
 
