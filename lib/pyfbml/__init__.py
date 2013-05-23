@@ -1,8 +1,10 @@
 """
-Module: pyfbml
-Author: Christian Gram Kalhauge
+.. module:: pyfbml
+    :platform: Unix
+    :synopsis: This module controlls the pyfbml interface.
 
-This module controlls the pyfbml interface.
+
+.. moduleauthor: Christian Gram Kalhauge
 """
 
 class MallformedFlowError (Exception) : pass

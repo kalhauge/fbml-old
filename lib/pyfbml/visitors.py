@@ -1,4 +1,3 @@
-
 class Visitor (object):
 
     def __init__(self):
