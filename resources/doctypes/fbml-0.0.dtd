@@ -4,7 +4,8 @@
 <!ATTLIST fbml version CDATA #FIXED "0.0">
 
 <!ELEMENT import CDATA>
-<!ATTLIST import version CDATA #REQUIRED>
+<!ATTLIST import 
+   module CDATA #REQUIRED>
 
 <!ELEMENT method (slot|sink|extend)+>
 <!ATTLIST method id CDATA #REQUIRED>
