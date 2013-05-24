@@ -1,7 +1,8 @@
 ## Binaries ##
 *.swp
 *.pyc
-lib/build/
+_build
+build
 
 ## OS specific ##
 .DS_Store
