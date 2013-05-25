@@ -1,14 +1,12 @@
-from __init__ import MallformedFlowError;
-from pprint import pprint
-from flow import Module
+
+from . import model
 
 def getSinks(root):
-    from flow import Sink
     sinks = dict();
     for sink_root in root.iter('sink'):
         sink_id = sink_root.attrib['id'];
         if sink_id in sinks: raise MallformedFlowError(); 
-        sinks[sink_id] = Sink(sink_id);
+        sinks[sink_id] = model.Sink(sink_id);
     return sinks;
 
 def sortSlotList(slot_list):

@@ -12,6 +12,8 @@ Contents:
    :maxdepth: 2
 
 
+.. automodule:: pyfbml
+   :members:
 
 Indices and tables
 ==================
