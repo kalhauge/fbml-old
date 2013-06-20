@@ -1,137 +1,274 @@
+"""
+.. module:: fbml.dataflow.parser
 
-from . import model
+"""
+
+import xml.etree.ElementTree as ET
+import logging
+
+log = logging.getLogger(__name__)
+
+from .. import exceptions
 
 def getSinks(root):
     sinks = dict();
     for sink_root in root.iter('sink'):
         sink_id = sink_root.attrib['id'];
-        if sink_id in sinks: raise MallformedFlowError(); 
+        if sink_id in sinks: 
+            raise exceptions.MallformedFlowError(
+                    "{!r} occuring multible times in tag {}".format(
+                        sink_id,
+                        root.tag)); 
         sinks[sink_id] = model.Sink(sink_id);
     return sinks;
 
 def sortSlotList(slot_list):
+    slot_list = list(slot_list)
     l = [None] * len(slot_list);
     for i,s in slot_list:
         s = int(s)
         if s > len(l) or s < 0: 
-            raise MallformedFlowError(
+            raise exceptions.MallformedFlowError(
                     "Slot id is {} should in the range [0,{}[".format(
                         s,len(l))
                     );
         l[s] = i;
     return l;
 
+def parseModule(moduleFile,extendFormats):
+    return XMLParser(moduleFile,extendFormats).parse()
 
-class FlowParser (object):
-    def __init__(self,filename,extensions):
-        self._extensions = extensions;
-        self._filename = filename;
-        self._methods = dict()
-        self._impls = dict()
-       
 
-    def createFlow(self):
-        from flow import Flow
-        import xml.etree.ElementTree as ET
-        self.addFlowTree(ET.parse(self._filename));
-        return Flow(self._methods,self._impls)
+class XMLWriter (object):
 
-    def addFlowTree(self,tree,module=Module("root")):
-        import xml.etree.ElementTree as ET
-        root = tree.getroot();
-        for extension in root.findall('extension'):
-            if not extension.attrib['name'] in self._extensions:
-                raise MallformedFlowError(
-                        "Should contain the {} extension".format(
-                            extension.attrib['name']
-                            ))
-
-        for im in root.findall('import'):
-            new_module = Module(im.text,module);
-            self.addFlowTree(ET.parse(new_module.getFilename()),new_module); 
-
-        for method in root.findall('method'):
-            self.addMethodTree(method,module);
-
-        for impl in root.findall('impl'):
-            self.addImplTree(impl);
-
-    def addMethodTree(self,tree,module):
-        from flow import Method
-        method_id = module.getId(tree.attrib['id']) 
+    def writeMethodToTree(self,method,root):
+        tree_method = ET.SubElement(root,'method',{'id':self.getId()})
         
-        sources = sortSlotList(
-                [(sid.attrib['id'],sid.attrib['slot'])
-                    for sid in tree.findall('source')]
-                );
+        for i, s in enumerate(method.getSinks()):
+            ET.SubElement(tree_method,'sink',{'id':s,'slot':str(i)})
+        for i, s in enumerate(method.getSources()):
+            ET.SubElement(tree_method,'source',{'id':s,'slot':str(i)})
        
-        sinks = sortSlotList(
-                [(sid.attrib['id'],sid.attrib['slot']) 
-                    for sid in tree.findall('sink')]
-                );
+        if method.hasImpl():
+            self.writeImplToTree(self,method.getImpl(),root)
+
+    def writeImplToTree(self,impl,root):
+        tree_impl = ET.SubElement(root,'impl')
+        tree_impl.set('method_id',impl.getMethod().getId())
+
+        for function in impl.getFunctions():
+            function.toTree(tree_impl)
+
+
+class ParseObject(object):
     
-        method = Method(method_id,sources,sinks);
-        self._methods[method_id] = method;
+    def __init__(self,**kargs):
+        for k,v in kargs.items():
+            setattr(self,k,v)
+        self.check()
 
-        for ext in tree.findall('extend'):
-            self._extensions[ext.attrib['name']].parseExt(ext,method);
-                    
-    def addImplTree(self,root,ex):
-        from flow import Impl,Sink, Function
-
-        method = self.getMethod(root.attrib['method_id'],ex);
-        sinks = getSinks(root);
-        for source_id  in method.getSources():
-            sinks[source_id] = Sink(source_id);
-
-        functions = dict()
-        for t_function in root.findall('function'):
-            f_sinks = self.parseSinks(t_function,sinks);
-            f_sources = self.parseSources(t_function,sinks);
-            function = Function(t_function.attrib['id'],f_sources,f_sinks);
-            functions[function.getId()] = function;
-            self.addExtensions(t_function,function);
-
-        method.addImpl(Impl(method,functions,sinks));
-        t = {'function' : functions, 'sink' : sinks} 
-        for ext in root.findall('extend'):
-            obj = t[ext.attrib['type']][ext.attrib['id']];
-            if ext.attrib['type'] != obj.getType():
+    def check(self):
+        attributes = self.requriedAttributes()
+        for attr in attributes:
+            if not hasattr(self,attr):
                 raise MallformedFlowError(
-                    "Type {} different from {}".format(
-                        ext.attrib['type'], obj));
-            extension = self._extensions[ext.attrib['name']]
-            extension.parseExt(ext,obj);
+                    "{} needs the attribute {}".format(self,attr)
+                    )
+
+    def __repr__(self):
+        return "<{} attr: {}>".format(self.__class__.__name__,vars(self))
+
+
+class ExtendableParseObject (ParseObject):
+
+    def setExtends(self,seq):
+        self.extends = list(seq)
+
+
+class Module(ParseObject):
+
+    def requriedAttributes(self): return ['version']
+
+    def setImports(self,seq):
+        self.imports = list(seq) 
+
+    def setExtensions(self,seq):
+        self.extensions = list(seq)
+
+    def setMethods(self,seq):
+        self.methods = list(seq)
+
+    def setImpls(self,seq):
+        self.impls = list(seq)
+
+class Method(ParseObject): 
+
+    def requriedAttributes(self): return ['id']
+
+    def setRequirements(self,seq):
+        self.requirements = list(seq)
+
+    def setEnsurances(self,seq):
+        self.ensurances = list(seq)
+
+
+class Impl(ParseObject):
+
+    def requriedAttributes(self): return ['method_id']
+
+    def setFunctions(self,seq):
+        self.functions = list(seq)
+
+
+class Extend(ParseObject):
+
+    def requriedAttributes(self): return ['name']
+
+
+class Function(ExtendableParseObject):
    
-    def getMethod(self,method_id,ext):
-        method_id = root.attrib['method_id'];
-        if not method_id in self._methods: raise MallformedFlowError();
-        else: method = self._methods[method_id];
+    def requriedAttributes(self): return ['id']
+    
+    def setSinks(self,seq):
+        self.sinks = list(seq)
+
+    def setSources(self,seq):
+        self.sources = list(seq)
+
+
+class Sink(ExtendableParseObject):
+
+    def requriedAttributes(self): return ['id','slot']
+
+
+class Source(ExtendableParseObject): 
+
+    def requriedAttributes(self): return ['sink_id','slot']
+
+
+class Require(ParseObject):
+
+    def requriedAttributes(self): return ['name']
+
+class Ensure(ParseObject):
+
+    def requriedAttributes(self): return ['name']
+
+class XMLExtensionFormats (object):
+
+    def __init__(self,extendFormats={}):
+        self._extendFormats = dict(extendFormats)
+
+    def addExtensionFormat(self,eformat):
+        self.addExtensionFormat({eformat.getName():eformat})
+
+    def addExtensionFormats(self,formats):
+        self._extendFormats.update(formats)
+
+    def getExtendFormat(self,name):
+        try: return self._extendFormats[name]
+        except KeyError:
+            log.warning(
+                    'Found name %s, no known extension parser:', 
+                    name)
+            return XMLExtensionFormat().setName(name)
+
+    def parse(self,extend,tree_extend): 
+        extend.data = self.getExtendFormat(extend.name).parse(tree_extend)
+
+    def parseRequire(self,require,tree_require):
+        require.data = self.getExtendFormat(require.name).parseRequire(tree_require)
+
+    def parseEnsure(self,ensure,tree_ensure):
+        ensure.data = self.getExtendFormat(ensure.name).parseEnsure(tree_ensure)
+
+class XMLExtensionFormat (object):
+
+    def setName(self,name):
+        self._name = name
+        return self
+
+    def getName(self):
+        return self._name
+    
+    def parse(self,tree):
+        return tree.text
+
+    def parseRequire(self,tree):
+        return tree.text
+
+    def parseEnsure(self,tree):
+        return tree.text
+
+    def write(self,tree,data):
+        ET.SubElement(tree,'extend').text = data
+
+class XMLParser (object):
+
+    def __init__(self,filelike,extendFormats):
+        self._moduleTree = ET.parse(filelike).getroot()
+        self._extendFormats = extendFormats
+
+    def parse(self):
+        return self.parseModule(self._moduleTree)
+
+    def parseModule(self,tree_module):
+        module = Module(**tree_module.attrib)
+        module.setImports(self._parseAll(tree_module,'import'))
+        module.setExtensions(self._parseAll(tree_module,'extension'))
+        module.setMethods(self._parseAll(tree_module,'method'))
+        module.setImpls(self._parseAll(tree_module,'impl'))
+        return module
+
+    def parseMethod(self,tree_method):
+        method = Method(**tree_method.attrib)
+        method.setRequirements(self._parseAll(tree_method,'require'))
+        method.setEnsurances(self._parseAll(tree_method,'ensure')) 
         return method
 
+    def parseImpl(self,tree_impl):
+        impl = Impl(**tree_impl.attrib)
+        impl.setFunctions(self._parseAll(tree_impl,'function'))
+        return impl
 
-    def parseSinks(self,root,sinks):
-        f_sink = [];
-        for sink in root.findall('sink'):
-            s = sinks[sink.attrib['id']];
-            self.addExtensions(sink,s);
-            f_sink.append((s,sink.attrib['slot']));
-        return sortSlotList(f_sink)
+    def parseFunction(self,tree_func):
+        func = Function(**tree_func.attrib)
+        func.setExtends(self._parseAll(tree_func,'extend'))
+        func.setSinks(self._parseAll(tree_func,'sink'))
+        func.setSources(self._parseAll(tree_func,'source'))
+        return func
+
+    def parseRequire(self,tree_require):
+        require = Require(**tree_require.attrib);
+        self._extendFormats.parseRequire(require,tree_require)
+        return require
+
+    def parseEnsure(self,tree_ensure): 
+        ensure = Ensure(**tree_ensure.attrib)
+        self._extendFormats.parseEnsure(ensure,tree_ensure)
+        return ensure
+
+    def parseSink(self,tree_sink):
+        sink = Sink(**tree_sink.attrib)
+        sink.setExtends(self._parseAll(tree_sink,'extend'))
+        return sink
+
+    def parseSource(self,tree_source):
+        source = Source(**tree_source.attrib)
+        source.setExtends(self._parseAll(tree_source,'extend'))
+        return source
         
-    def parseSources(self,root,sinks):
-        from flow import Source
-        f_sources = [];
-        for source in root.findall('source'):
-            s = Source(sinks[source.attrib['sink_id']]);
-            f_sources.append((s,source.attrib['slot']));
-        return sortSlotList(f_sources)
+    def parseExtend(self,tree_extend):
+        extend = Extend(**tree_extend.attrib)
+        self._extendFormats.parse(extend,tree_extend)
+        return extend
 
-    def addExtensions(self,root,obj):
-        for ext in root.findall('extend'):
-            extension = self._extensions[ext.attrib['name']]
-            extension.parseExt(ext,obj);
-            
+    def parseImport(self,tree_import):
+        return tree_import.text
 
-                    
+    def parseExtension(self,tree_ext):
+        return tree_ext.text
 
-
+    def _parseAll(self,tree,name):
+        function = getattr(self,"parse" + name.capitalize())
+        return (function(elm) for elm in tree.findall(name))

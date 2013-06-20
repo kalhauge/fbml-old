@@ -1,8 +1,32 @@
+#!python
 """
-Model: type.py
-
 Adds types to the flow. 
 """
+import sys
 
+import pyfbml
 
+def main():
+    args = parseArgs()
+  
+    ext = pyfbml.getExtensions('MethodName')
+    
+    module = pyfbml.importModule(args.modulename,ext)
 
+    module.save(sys.stdout if args.output is None else args.output) 
+
+def parseArgs():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('modulename',
+            help='''The name of the module to optimize''')
+    parser.add_argument('--in_place',action='store_true',
+            help='''If used this optimizer will perform the optimization in-place
+                    instead of outputing the new data the output position''')
+    parser.add_argument('-a','--output',
+            help='''The output position of the result, if none is given the
+                    output will be done to the stdout''')
+    args = parser.parse_args()
+    return args
+
+if __name__ == '__main__': main()

@@ -1,38 +1,120 @@
 """
-.. module:: fbml.dataflow.model
+.. module:: pyfbml.dataflow.model
+
+.. moduleauthor:: Christian Gram Kalhauge <s093273@student.dtu.dk>
+
+Model
+=====
+
+This module contains the dataflow model. The dataflow model contains of two main
+classes the :class:`~pyfbml.dataflow.model.Method` and the :class:`~pyfbml.dataflow.model.Impl`
+
+
+Method
+------
+.. autoclass:: pyfbml.dataflow.model.Method
+    :members:
+
+Implementation
+--------------
+.. autoclass:: pyfbml.dataflow.model.Impl
+    :members:
+
 """
 
+from .. import exceptions
 
-class Extension (object):
-    def __init__(self):
-        self._data = dict()
-    
-    def setName(self,name):
-        self._name = name
+class ModelObject (object): pass
 
-    def getName(self):
-        return self._name
+class ExtendableModelObject(ModelObject):
 
-    def parseExt(self,ext,obj):
-        self.parseExtension(ext,obj);
+    def setExtensions(self,extensions):
+        self._extensions = dict((ext.getName(),ext) for ext in extensions)
 
-    def set(self,obj,data):
-        if obj in self._data:
-            raise MallformedFlowError()
-        self._data[obj] = data;
+    def getExtension(self,name):
+        return self._extensions[name].getData()
 
-    def get(self,obj):
-        try: return self._data[obj]
-        except KeyError as e:
-            raise MallformedFlowError("No extendsion data for " 
-                    + str(obj) + " in " + self.getName())
+class Method (ModelObject):
 
-class Method (object):
-    def __init__(self,ID,sources,sinks):
+    """
+    The Method is the main id holder of the model, it controls the details
+    about the requirements and ensurances of the execution of the function.
+
+    :param ID: the ID of the method
+    :param requirements: the requirements of the method.
+    :param ensurances: the ensurences of the method.
+    """
+    def __init__(self,ID,requirements={},ensurances={}):
         self._id = ID;
-        self._sinks = sinks;
-        self._sources = sources;
-        self._impl = None;
+        self._requirements = dict(requirements)
+        self._ensurances = dict(ensurances)
+        self._impl = NoneImpl() 
+
+    def getId(self):
+        """
+        :returns: the id of the method
+        """
+        return self._id
+    
+    def getRequirements(self):
+        """
+        :returns: the requirements of the method
+        """
+        return self._requirements
+
+    def getRequirement(self,name):
+        """
+        :returns: the requirement corresponding to the name
+        """
+        return self.getRequirements()[name]
+
+    def getEnsurances(self):
+        """
+        :returns: the ensurances of the method
+        """
+        return self._ensurances
+
+    def getEnsurance(self,name):
+        """
+        :returns: the ensurance corresponding to the name
+        """
+        return self.getEnsurances()[name]
+
+    def addEnsurances(self,ensurances):
+        """
+        :param ensurances: a sequence of ensurances
+        """
+        self.getEnsurances().update((ens.getName(),ens) for ens in ensurances)
+        return self
+
+    def addRequirements(self,requirements):
+        """
+        :param requirements: a sequence of requirements
+        """
+        self.getRequirements().update((req.getName(),req) for req in requirements)
+        return self
+
+    def getSources(self):
+        return self.getRequirement('Sources').getData()
+
+    def getSinks(self):
+        return self.getEnsurance('Sinks').getData()
+
+    def setImpl(self,impl):
+        self._impl = impl
+        return self
+
+    def hasImpl(self):
+        """
+        :returns: ``True`` if the method, has an :class:`~pyfbml.dataflow.model.Impl`
+        """
+        return not isinstance(self._impl,NoneImpl) 
+
+    def getImpl(self):
+        """
+        :retruns: the implementation, might be of type :class:`~pyfbml.dataflow.model.NoneImpl`
+        """
+        return self._impl
 
     def __repr__(self):
         return '<method id="'+self._id+'">'
@@ -40,35 +122,64 @@ class Method (object):
     def __str__(self):
         return 'Method "{}" : ({}) -> ({})'.format(
                 self._id,
-                ", ".join(self._sources),
-                ", ".join(self._sinks))
+                ", ".join(self._requirements),
+                ", ".join(self._ensurances))
 
-    def getSources(self):
-        return self._sources
 
-    def getSinks(self):
-        return self._sinks
 
-    def addImpl(self, impl):
-        self._impl = impl;
+class Extend (ModelObject):
 
-    def getImpl(self):
-        return self._impl;
+    def __init__(self,name,data):
+        self._name = name
+        self._data = data
 
-    def getType(self): return "method"
+    def getName(self):
+        return self._name
 
-class Impl (object):
-    def __init__(self,method,functions,sinks):
-        self._method = method;
-        self._functions = functions
-        self._sinks = sinks;                
+    def getData(self):
+        return self._data
 
-    def __repr__(self):
-        return '<impl method={!r} functions={} sinks={}>'.format(
-                self._method,
-                len(self._functions),
-                len(self._sinks))
+class Ensure (Extend) : pass
+class Require (Extend) : pass 
 
+class Impl (ModelObject):
+
+    """
+    This is the implementation of the method.
+    
+    :param functions: 
+        a sequence containing elements of type :class:`~pyfbml.dataflow.model.Function`,
+        the default is an empty list.
+    
+    :param sinks:
+        a sequence containing elements of type :class:`~pyfbml.dataflow.model.Sink`,
+        the default is an empty list.
+
+    """
+
+    def __init__(self,method,functions=[],sinks={}):
+        self._method = method.setImpl(self)
+        self._functions = list(functions)
+        self._sinks = dict(sinks)
+
+
+    def addFunctions(self,functions):
+        """
+        Adds functions to the implementation
+
+        :param functions: 
+            a sequence of type :class:`~pyfbml.dataflow.model.Function`
+        """
+        self._functions.extend(functions)
+
+    def addSinks(self,sinks):
+        """
+        Adds functions to the implementation
+
+        :param functions: 
+            a sequence of type :class:`~pyfbml.dataflow.model.Function`
+        """
+        self._sinks.update((sink.getId(),sink) for sink in sinks)
 
     def getSink(self,sid):
         return self._sinks[sid]
@@ -76,21 +187,38 @@ class Impl (object):
     def getFunctions(self):
         return self._functions
 
+    def getSinks(self):
+        return self._sinks
+
     def getMethod(self):
         return self._method
 
-class Function (object):
-    def __init__(self,sid,sources,sinks):
+    def __repr__(self):
+        return '<impl method={!r} functions={} sinks={}>'.format(
+                self._method,
+                len(self._functions),
+                len(self._sinks))
+
+class NoneImpl (Impl):
+    def __init__(self) : pass
+
+class Function (ExtendableModelObject):
+    def __init__(self,sid,sources=[],sinks=[]):
         self._id = sid;
-        self._sinks = sinks;
-        self._sources = sources;
-        self.connect();
+        self._sinks = list(sinks)
+        self._sources = list(sources)
 
     def connect(self):
-        for i,sink in enumerate(self._sinks):
-            sink.addFunction(self,i);
-        for i,source in enumerate(self._sources):
-            source.addFunction(self,i);
+        for sink in self._sinks:
+            sink.addFunction(self);
+        for source in self._sources:
+            source.addFunction(self);
+
+    def addSinks(self,sinks):
+        self._sinks.extend(sinks)
+
+    def addSources(self,sources):
+        self._sources.extend(sources)
 
     def getSources(self):
         return self._sources;
@@ -113,16 +241,26 @@ class Function (object):
 
     def getType(self): return "function"
 
-class Sink (object):
-    def __init__(self,sid):
+    def toTree(self,root,ext):
+        import xml.etree.ElementTree as ET
+        func = ET.SubElement(root,'function')
+        func.set('id',self.getId())
+
+        for sink in self.getSinks():
+            sink.toTree(func,ext)
+
+        for source in self.getSources():
+            source.toTree(func,ext)
+
+class Sink (ExtendableModelObject):
+    def __init__(self,sid,slot):
         self._id = sid;
+        self._slot = slot
         self._function = None
-        self._slot = None
         self._users = [];
     
-    def addFunction(self,function,slot):
+    def addFunction(self,function):
         self._function = function;
-        self._slot = slot;
 
     def getFunction(self):
         return self._function;
@@ -132,6 +270,9 @@ class Sink (object):
 
     def getId(self):
         return self._id
+
+    def getSlot(self):
+        return self._slot
 
     def addUser(self,source):
         self._users.append(source);
@@ -148,18 +289,27 @@ class Sink (object):
 
     def getType(self): return "sink"
 
-class Source (object):
-    def __init__(self,sink):
+    def toTree(self,root,ext):
+        import xml.etree.ElementTree as ET
+        ET.SubElement(root,'sink',{'id':self.getId(),'slot':str(self.getSlot())})
+        for e in ext:
+            e.toTree(root,self)
+
+class Source (ExtendableModelObject):
+    def __init__(self,sink,slot):
         self._sink = sink;
+        self._slot = slot;
         sink.addUser(self);
 
-    def addFunction(self,function,slot):
+    def addFunction(self,function):
         self._function = function;
-        self._slot = slot;
 
     def getSink(self):
         return self._sink;
 
+    def getSlot(self):
+        return self._slot
+    
     def getFunction(self):
         return self._function
 
@@ -171,3 +321,8 @@ class Source (object):
             helper[self] = self.getSink().depth(helper) + 1;
         return helper[self]
 
+    def toTree(self,root,ext):
+        import xml.etree.ElementTree as ET
+        ET.SubElement(root,'source',{'sink_id':self.getSink().getId(),'slot':str(self.getSlot())})
+        for e in ext:
+            e.toTree(root,self)

@@ -2,7 +2,7 @@
 """
 Compiler : flow2dot 
 
-This is the simple flow to dot compiler wich takes a .fl file
+This is the simple flow to dot compiler wich takes modulename 
 and produces dot code.
 
 Need extensions:
@@ -12,28 +12,45 @@ Need extensions:
 
 import argparse
 import sys
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 import pyfbml
-from pyfbml.extensions import MethodNameExtension
+import pyfbml.dataflow
 
-def fail(msg):
-    import sys;
-    print "Failed: " + str(msg);
-    sys.exit(-1);
 
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('modulename',help='the name of the module');
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('methodid',help='the fullpath id of the method');
 
-args = parser.parse_args();
+    args = parser.parse_args();
 
-ext = pyfbml.getExtensions('MethodName');                
+    ext = pyfbml.getExtensions('MethodName');                
+    modulename, methodname = args.methodid.rsplit('.',1)
 
-flow = pyfbml.parseFlow(args.filename,ext);
+    module = pyfbml.importModule(modulename,ext);
+    method = module.getMethod(methodname);
+    impl = method.getImpl();
+    sys.stdout.write("digraph {\n")
+    sys.stdout.write( "  node [shape=record,style=rounded,height=0.1];\n")
+    sys.stdout.write('  ' + '\n  '.join(DotVisitor().visit(impl)) + "\n")
 
-method = flow.getMethod(args.method_name);
-impl = method.getImpl();
+    for sid in method.getSinks():
+        sink = impl.getSink(sid)
+        sys.stdout.write('  OUT_{} [label = "{}"];\n'.format(
+                sink.getId(),
+                sink.getId()))
+        sys.stdout.write('  "{}":sink_{} -> "OUT_{}";\n'.format(
+                sink.getFunction().getId(),
+                sink.getId(),
+                sink.getId()))
+    sys.stdout.write("}\n")
 
 class DotVisitor (pyfbml.Visitor):
+
+    def __init__(self):
+        super(DotVisitor,self).__init__()
     
     def setup(self,method_sources):
         for sink in method_sources:
@@ -58,7 +75,8 @@ class DotVisitor (pyfbml.Visitor):
             function.getId(),
             '{} {} {}'.format(
                '{{{}}} |'.format(in_str) if not in_str is '' else '',
-               ext['MethodName'].get(function),
+               function.getExtension('MethodName'),
+
                '| {{{}}}'.format(out_str) if not out_str is '' else '',
                )
             )
@@ -83,19 +101,4 @@ class DotVisitor (pyfbml.Visitor):
         return self.get(function) + [function_str] + connections
 
         
-print "digraph {"
-print "  node [shape=record,style=rounded,height=0.1];"
-from pprint import pprint
-print '  ' + '\n  '.join(DotVisitor().visit(impl));
-
-for sid in method.getSinks():
-    sink = impl.getSink(sid)
-    print '  OUT_{} [label = "{}"];'.format(
-            sink.getId(),
-            sink.getId())
-    print '  "{}":sink_{} -> "OUT_{}";'.format(
-            sink.getFunction().getId(),
-            sink.getId(),
-            sink.getId());
-print "}"
-
+if __name__ == "__main__" : main()
