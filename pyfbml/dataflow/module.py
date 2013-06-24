@@ -73,7 +73,7 @@ class BuildEnvironment (object):
         impl = model.Impl(methods[pImpl.method_id])
         sinks = chain.from_iterable((s for s in f.sinks) for f in pImpl.functions)
         sinks = dict((sink.id,self.buildSink(sink)) for sink in sinks)
-        args = impl.getMethod().getSources().items()
+        args = impl.getMethod().getRequirement('Sources').items()
         sinks.update((sid,model.Sink(sid,slot)) for slot,sid in args)
         impl.addSinks(sinks.values())
         impl.addFunctions(self.buildFunction(f,sinks) for f in pImpl.functions)

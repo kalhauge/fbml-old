@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<fbml version="0.0">
+    <import>stdlib</import>
+    <extension>MethodName</extension>
+    <extension>Constant</extension>
+    <extension>Value</extension>
+    <extension>Type</extension>
+    <method id="m1">
+        <require name="MethodName">Main</require>
+        <require name="Type">
+            <type id="in">IO</type>
+        </require>
+        <require name="Sources">
+            <source slot="0" id="in" />
+        </require>
+        <ensure name="Sinks">
+            <sink slot="0" id="out" />
+        </ensure>
+        <ensure name="Type">
+            <type id="out">
+                <type id="in" />
+            </type>
+        </ensure>
+    </method>
+
+    <impl method_id="m1">
+        <function id="c1">
+            <extend name="MethodName">Constant</extend>
+            <extend name="Constant">
+                <type>Integer</type>
+                <value>3</value>
+            </extend>
+            <sink id="n1" slot="0"/>
+        </function>
+
+        <function id="c2">
+            <extend name="MethodName">Constant</extend> 
+            <extend name="Constant">
+                <type>Integer</type>
+                <value>5</value>
+            </extend>
+            <sink id="n2" slot="0"/>
+        </function>
+
+        <function id="f_add">
+            <extend name="MethodName">Add</extend> 
+            <source sink_id="n1" slot="0"/>
+            <source sink_id="n2" slot="1"/>
+            <sink id="n3" slot="0"/>
+        </function>
+
+        <function id="f_print">
+            <extend name="MethodName">Print</extend> 
+            <source sink_id="in" slot="0"/>
+            <source sink_id="n3" slot="1"/>
+            <sink id="out" slot="0"/>
+        </function>
+    </impl> 
+</fbml>

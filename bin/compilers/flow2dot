@@ -53,13 +53,15 @@ class DotVisitor (pyfbml.ControlFlowVisitor):
         super(DotVisitor,self).__init__()
     
     def setup(self,method):
-        for sink in method.getSources():
-            self.set(sink,['IN_{} [label="{}"];'.format(
-                sink.getId(), 
-                sink.getId())]
-                )
+        """
+        Setup initializes the list of lines which everythis is appended to
+        """
+        dotlines = [] 
+        for sink in method.getSources().values():
+            dotlines.append('IN_{} [label="{}"];'.format( sink, sink))
+        return dotlines 
 
-    def apply(self,function):
+    def apply(self,function,dotlines):
         in_str = "|".join(["<source_{}>".format(s.getSink().getId()) 
                         for s in function.getSources()]);
         out_str = "|".join(["<sink_{}>".format(s.getId()) 
@@ -90,8 +92,9 @@ class DotVisitor (pyfbml.ControlFlowVisitor):
                         sink.getId())
 
             connections.append(con);
+        dotlines.append(function_str)
+        dotlines.extend(connections)
 
-        return self.get(function) + [function_str] + connections
-
+        return dotlines
         
 if __name__ == "__main__" : main()

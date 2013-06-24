@@ -2,7 +2,7 @@
 
 def calculateRunorder(impl):
     from collections import deque
-    sinks = [impl.getSink(sid) for sid in impl.getMethod().getSinks()]
+    sinks = impl.getMethod().getSinks()
     sources = []
     q = deque(sinks);
     f_set = set()        
@@ -57,18 +57,27 @@ class DataFlowVisitor (object):
 class ControlFlowVisitor (object):
 
     def __init__(self):
-        pass
+        self._data = dict()
 
     def visit(self,impl):
         runorder = calculateRunorder(impl)
-        result = setup(impl.getMethod())
+        result = self.setup(impl.getMethod())
         for function in runorder:
             result = self.apply(function,result)
 
-        return result
+        return self.final(result)
 
     def setup(self, method):
         pass 
 
-    def apply(self, function):
+    def apply(self, function,result):
         pass
+
+    def final(self, result):
+        pass
+
+    def set(self,obj,data):
+        self._data[obj]=data;
+
+    def get(self,obj):
+        return self._data[obj];

@@ -121,15 +121,14 @@ class Method (ModelObject):
 
     def getSources(self):
         """
-        :returns: the required sources in a :class:`dict` slot -> id 
         """
-        return self.getRequirement('Sources')
+        return [s for s in self.getRequirement('Sources').values()]
 
     def getSinks(self):
         """
-        :returns: the required sinks in a :class:`dict` id -> slot
         """
-        return self.getEnsurance('Sinks')
+        impl = self.getImpl()
+        return [impl.getSink(s) for s in self.getEnsurance('Sinks')]
 
     def setImpl(self,impl):
         self._impl = impl
