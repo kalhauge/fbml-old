@@ -11,11 +11,8 @@ Index
 .. toctree::
    :maxdepth: 2
 
-
-.. automodule:: pyfbml
-   :members:
-
-.. automodule:: pyfbml.dataflow.model
+   intro
+   model
 
 Indices and tables
 ==================

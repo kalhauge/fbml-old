@@ -2,6 +2,8 @@
 <fbml version="0.0">
     <import>stdlib</import>
     <extension>MethodName</extension>
+    <extension>Constant</extension>
+    <extension>Value</extension>
     <extension>Type</extension>
     <method id="m1">
         <require name="MethodName">Main</require>
@@ -23,12 +25,20 @@
 
     <impl method_id="m1">
         <function id="c1">
-            <extend name="MethodName">Constant</extend> 
+            <extend name="MethodName">Constant</extend>
+            <extend name="Constant">
+                <type>Integer</type>
+                <value>3</value>
+            </extend>
             <sink id="n1" slot="0"/>
         </function>
 
         <function id="c2">
             <extend name="MethodName">Constant</extend> 
+            <extend name="Constant">
+                <type>Integer</type>
+                <value>5</value>
+            </extend>
             <sink id="n2" slot="0"/>
         </function>
 

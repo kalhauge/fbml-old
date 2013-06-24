@@ -20,6 +20,20 @@ Implementation
 .. autoclass:: pyfbml.dataflow.model.Impl
     :members:
 
+.. autoclass:: pyfbml.dataflow.model.NoneImpl
+    :members:
+
+Internal classes
+................
+
+.. autoclass:: pyfbml.dataflow.model.Function
+    :members:
+
+.. autoclass:: pyfbml.dataflow.model.Sink
+    :members:
+
+.. autoclass:: pyfbml.dataflow.model.Source
+    :members:
 """
 
 from .. import exceptions
@@ -28,11 +42,22 @@ class ModelObject (object): pass
 
 class ExtendableModelObject(ModelObject):
 
+    """
+    The ExtendableModelObject allows the object to be extendable, with extensions.
+    """
+
     def setExtensions(self,extensions):
         self._extensions = dict((ext.getName(),ext) for ext in extensions)
+        return self
 
     def getExtension(self,name):
         return self._extensions[name].getData()
+
+    def getExtensions(self):
+        return self._extensions
+
+    def __getitem__(self,name): 
+        return self.getExtension(name)
 
 class Method (ModelObject):
 
@@ -66,7 +91,7 @@ class Method (ModelObject):
         """
         :returns: the requirement corresponding to the name
         """
-        return self.getRequirements()[name]
+        return self.getRequirements()[name].getData()
 
     def getEnsurances(self):
         """
@@ -78,7 +103,7 @@ class Method (ModelObject):
         """
         :returns: the ensurance corresponding to the name
         """
-        return self.getEnsurances()[name]
+        return self.getEnsurances()[name].getData()
 
     def addEnsurances(self,ensurances):
         """
@@ -95,10 +120,16 @@ class Method (ModelObject):
         return self
 
     def getSources(self):
-        return self.getRequirement('Sources').getData()
+        """
+        :returns: the required sources in a :class:`dict` slot -> id 
+        """
+        return self.getRequirement('Sources')
 
     def getSinks(self):
-        return self.getEnsurance('Sinks').getData()
+        """
+        :returns: the required sinks in a :class:`dict` id -> slot
+        """
+        return self.getEnsurance('Sinks')
 
     def setImpl(self,impl):
         self._impl = impl
@@ -122,30 +153,18 @@ class Method (ModelObject):
     def __str__(self):
         return 'Method "{}" : ({}) -> ({})'.format(
                 self._id,
-                ", ".join(self._requirements),
-                ", ".join(self._ensurances))
+                ", ".join(i for i in self.getSources().values()),
+                ", ".join(i for i in self.getSinks()))
 
 
-
-class Extend (ModelObject):
-
-    def __init__(self,name,data):
-        self._name = name
-        self._data = data
-
-    def getName(self):
-        return self._name
-
-    def getData(self):
-        return self._data
-
-class Ensure (Extend) : pass
-class Require (Extend) : pass 
 
 class Impl (ModelObject):
 
     """
     This is the implementation of the method.
+
+    :param method:
+        the method to implement.
     
     :param functions: 
         a sequence containing elements of type :class:`~pyfbml.dataflow.model.Function`,
@@ -171,26 +190,46 @@ class Impl (ModelObject):
             a sequence of type :class:`~pyfbml.dataflow.model.Function`
         """
         self._functions.extend(functions)
+        return self
 
     def addSinks(self,sinks):
         """
-        Adds functions to the implementation
+        Adds sinks to the implementation
 
         :param functions: 
-            a sequence of type :class:`~pyfbml.dataflow.model.Function`
+            a sequence of type :class:`~pyfbml.dataflow.model.Sink`
         """
         self._sinks.update((sink.getId(),sink) for sink in sinks)
+        return self
 
     def getSink(self,sid):
+        """
+        The method to uses to get any sink in the used in the implementation.
+        
+        :param sid:
+            the sid of the :class:`~pyfbml.dataflow.model.Sink` that should be 
+            found.
+        
+        :returns: the :class:`~pyfbml.dataflow.model.Sink`, with id ``sid`` 
+        """ 
         return self._sinks[sid]
 
     def getFunctions(self):
+        """
+        :returns: the functions used in the implementation.
+        """
         return self._functions
 
     def getSinks(self):
+        """
+        :returns: the sinks used in the implementations.
+        """
         return self._sinks
 
     def getMethod(self):
+        """
+        :returns: the implemented :class:`~pyfbml.dataflow.model.Method`
+        """
         return self._method
 
     def __repr__(self):
@@ -200,9 +239,22 @@ class Impl (ModelObject):
                 len(self._sinks))
 
 class NoneImpl (Impl):
+    """
+    A None implementations, indicating no implementation. 
+    """
     def __init__(self) : pass
 
 class Function (ExtendableModelObject):
+    """
+    The function is the function call of fbml. Its primary function is to 
+    provide data to help determine which method to be used on the sources,
+    of the function to generate the data supoced to go to the sinks.
+
+    :param sid:
+        the id of the function, which is used to identify the function later
+        and when associating extentions to it.
+
+    """
     def __init__(self,sid,sources=[],sinks=[]):
         self._id = sid;
         self._sinks = list(sinks)
@@ -241,16 +293,6 @@ class Function (ExtendableModelObject):
 
     def getType(self): return "function"
 
-    def toTree(self,root,ext):
-        import xml.etree.ElementTree as ET
-        func = ET.SubElement(root,'function')
-        func.set('id',self.getId())
-
-        for sink in self.getSinks():
-            sink.toTree(func,ext)
-
-        for source in self.getSources():
-            source.toTree(func,ext)
 
 class Sink (ExtendableModelObject):
     def __init__(self,sid,slot):
@@ -289,12 +331,6 @@ class Sink (ExtendableModelObject):
 
     def getType(self): return "sink"
 
-    def toTree(self,root,ext):
-        import xml.etree.ElementTree as ET
-        ET.SubElement(root,'sink',{'id':self.getId(),'slot':str(self.getSlot())})
-        for e in ext:
-            e.toTree(root,self)
-
 class Source (ExtendableModelObject):
     def __init__(self,sink,slot):
         self._sink = sink;
@@ -321,8 +357,19 @@ class Source (ExtendableModelObject):
             helper[self] = self.getSink().depth(helper) + 1;
         return helper[self]
 
-    def toTree(self,root,ext):
-        import xml.etree.ElementTree as ET
-        ET.SubElement(root,'source',{'sink_id':self.getSink().getId(),'slot':str(self.getSlot())})
-        for e in ext:
-            e.toTree(root,self)
+
+
+class Extend (ModelObject):
+
+    def __init__(self,name,data):
+        self._name = name
+        self._data = data
+
+    def getName(self):
+        return self._name
+
+    def getData(self):
+        return self._data
+
+class Ensure (Extend) : pass
+class Require (Extend) : pass 

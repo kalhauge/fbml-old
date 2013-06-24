@@ -1,0 +1,85 @@
+#!python
+
+import argparse
+import pyfbml
+import hamcrest as hc
+import llvm.core as llvmc
+import logging
+
+log = logging.getLogger("flow2llvm")
+
+logging.basicConfig(level=logging.DEBUG)
+
+
+
+
+def main():
+    args = parseArgs()
+
+    ext = pyfbml.getExtensions('MethodName','Type')
+    
+    module = pyfbml.importModule(args.modulename,ext)
+
+    llvmModule = llvmc.Module.new(args.modulename)
+
+    result = LLVMVisitor(module,llvmModule).visit(module.getMethod(args.methodname).getImpl())
+    print(result)
+
+    print(llvmModule)
+
+
+class LLVMVisitor(pyfbml.Visitor):
+
+    def __init__(self,module,llvm_module):
+        super(LLVMVisitor,self).__init__()
+        self._module = module
+        self._llvm_module = llvm_module
+
+    def setup(self,method):
+        print("Building", method)
+        function = llvmc.Function.new(
+                self._llvm_module,
+                llvmc.Type.function(llvmc.Type.void(),[]),
+                method.getId())
+
+    def merge(self,sinks): pass
+
+    def apply(self,function):
+        from pyfbml.dataflow.module import require
+        methodname = function['MethodName']
+        methods = self._module.getMethodWhere(
+                hc.all_of(
+                    require('MethodName',
+                        hc.equal_to(methodname)
+                        ),
+                    require('Sources',
+                        hc.has_length(
+                            len(function.getSources())
+                            )
+                        )
+                    )
+                )
+        if len(methods) == 0: 
+            log.error("No found method for %s",methodname)
+            return
+        if len(methods) > 1: 
+            log.error("Multible methods found for %s, %s",
+                methodname,
+                methods)
+            return
+        method = methods[0]
+        if method.hasImpl():
+            required = self.visit(method.getImpl())
+        else:
+
+         
+        return methodname
+
+def parseArgs():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('methodid',help='the fullpath id of the method')
+    args = parser.parse_args()
+    args.modulename, args.methodname = args.methodid.rsplit('.',1)
+    return args
+
+if __name__ == '__main__': main()

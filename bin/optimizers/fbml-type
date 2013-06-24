@@ -9,11 +9,11 @@ import pyfbml
 def main():
     args = parseArgs()
   
-    ext = pyfbml.getExtensions('MethodName')
+    ext = pyfbml.getExtensions('MethodName','Type')
     
     module = pyfbml.importModule(args.modulename,ext)
 
-    module.save(sys.stdout if args.output is None else args.output) 
+    pyfbml.saveModule(module,sys.stdout if args.output is None else args.output,ext) 
 
 def parseArgs():
     import argparse

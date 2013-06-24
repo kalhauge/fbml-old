@@ -47,24 +47,17 @@ def main():
                 sink.getId()))
     sys.stdout.write("}\n")
 
-class DotVisitor (pyfbml.Visitor):
+class DotVisitor (pyfbml.ControlFlowVisitor):
 
     def __init__(self):
         super(DotVisitor,self).__init__()
     
-    def setup(self,method_sources):
-        for sink in method_sources:
+    def setup(self,method):
+        for sink in method.getSources():
             self.set(sink,['IN_{} [label="{}"];'.format(
                 sink.getId(), 
                 sink.getId())]
                 )
-
-    def merge(self,sinks):
-        result = [];
-        for sink in sinks:
-            result.extend(self.get(sink));
-        from collections import OrderedDict
-        return list(OrderedDict.fromkeys(result));
 
     def apply(self,function):
         in_str = "|".join(["<source_{}>".format(s.getSink().getId()) 
@@ -75,7 +68,7 @@ class DotVisitor (pyfbml.Visitor):
             function.getId(),
             '{} {} {}'.format(
                '{{{}}} |'.format(in_str) if not in_str is '' else '',
-               function.getExtension('MethodName'),
+               function['MethodName'],
 
                '| {{{}}}'.format(out_str) if not out_str is '' else '',
                )

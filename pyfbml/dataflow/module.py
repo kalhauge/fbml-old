@@ -5,7 +5,6 @@
 .. moduleauthor: Christian Gram Kalhauge
 
 """
-from . import parser
 from . import model
 from .. import exceptions
 
@@ -24,8 +23,8 @@ def readPath(modulename):
 
 class BuildEnvironment (object):
 
-    def __init__(self,extendFormats,paths):
-        self._extendFormats = extendFormats
+    def __init__(self,paths,parser):
+        self._parser = parser
         self._paths = paths
         self._packageEnvironment = PackageEnvironment()
         self._buildModules = set()
@@ -42,7 +41,7 @@ class BuildEnvironment (object):
             try:
                 filename = os.path.join(path, self.getFilename(module))
                 with open(filename) as moduleFile:
-                    pars = parser.parseModule(moduleFile,self.getExtendFormats())
+                    pars = self._parser.parse(moduleFile) 
                     break
             except IOError:
                 continue
@@ -96,20 +95,20 @@ class BuildEnvironment (object):
 
     def buildExtensions(self,pExt):
         return (model.Extend(ens.name,ens.data) for ens in pExt)
+
     def buildSink(self,sink):
-        return model.Sink(sink.id,sink.slot)
+        return model.Sink(sink.id,sink.slot).setExtensions(
+                self.buildExtensions(sink.extends))
 
     def buildSource(self,source,sinks):
-        return model.Source(sinks[source.sink_id],source.slot)
+        return model.Source(sinks[source.sink_id],source.slot).setExtensions(
+                self.buildExtensions(source.extends))
         
     def getFilename(self,element):
         return self.getPackageEnvironment().getFilename(element)
 
     def getPackageEnvironment(self):
         return self._packageEnvironment
-
-    def getExtendFormats(self):
-        return self._extendFormats
 
     def addBuildModule(self,module):
         self._buildModules.add(module)
@@ -144,6 +143,12 @@ class Module (object):
 
     def getMethod(self,ID):
         return self._methods[ID];
+
+    def getMethodWhere(self,matcher):
+        results = [method for method in self.getMethods() if matcher.matches(method)]
+        for imp in self.getImports():
+            results.extend(imp.getMethodWhere(matcher))
+        return results
     
     def getMethods(self):
         return self._methods.values()
@@ -160,27 +165,13 @@ class Module (object):
     def getName(self):
         return self._package.getId(self._name)
 
-    def save(self,filelike):
-        import xml.etree.ElementTree as ET
-        tree = ET.ElementTree()
-        
-        root = ET.Element('fbml')
-        root.set('version','0.0')
-        for module in self.getImports():
-            ET.SubElement(root,'import').text = module.getName()
-        for ext in self.getExtensions().values():
-            ET.SubElement(root,'extension').text = ext.getName()
-        for method in self.getMethods():
-            method.toTree(root,self.getExtensions())
-        tree._setroot(root)
-        
-        tree.write(filelike,xml_declaration="1.0",encoding="unicode")
-        
     def __str__(self):
         return self.getName()
 
     def __repr__(self):
         return "<Module at {}>".format(self.getName())
+
+
 class Package (object):
     
     def __init__(self,name,package):
@@ -243,4 +234,25 @@ class PackageEnvironment(object):
     def getRootPackage(self):
         return self._rootPackage
 
+
+
+from hamcrest.core.base_matcher import BaseMatcher
+from hamcrest.core.helpers.hasmethod import hasmethod
+
+class require (BaseMatcher):
+
+    def __init__(self,name,matcher):
+        self._name = name
+        self._matcher = matcher
+
+    def _matches(self, item):
+        if not hasmethod(item,'getRequirement'):
+            return False
+        return self._matcher.matches(item.getRequirement(self._name))
+
+    def describe_to(self,description):
+        description.append("requirement with name {!r} that matches {!s}".format(
+                self._name,
+                self._matcher)
+                )
 

@@ -1,17 +1,39 @@
 <?xml version="1.0"?>
 <!DOCTYPE fbml SYSTEM "../doctypes/fbml-noext.dtd">
 <fbml version="0.0">
-   <method id="add-integer">
-      <extend name="MethodName">Add</extend>
-      <source id="a" slot="0"/>
-      <source id="b" slot="1"/>
-      <sink   id="c" slot="0"/>
-   </method>
+    <method id="add-integer">
+        <require name="MethodName">Add</require>
+        <require name="Sources">  
+            <source id="a" slot="0"/>
+            <source id="b" slot="1"/>
+        </require>
+        <require name="Type">
+            <type id="a">Integer</type>
+            <type id="b">Integer</type>
+        </require>
+        <ensure name="Sinks">  
+            <sink id="c" slot="0"/>
+        </ensure>
+        <ensure name="Type">
+            <type id="c">Integer</type>
+        </ensure>
+    </method>
 
-   <method id="print-integer">
-      <extend name="MethodName">Print</extend>
-      <source id="io_in" slot="0"/>
-      <source id="printable" slot="1"/>
-      <sink   id="io_out" slot="0"/>
+    <method id="print-integer">
+        <require name="MethodName">Print</require>
+        <require name="Sources">
+            <source id="io_in" slot="0"/>
+            <source id="printable" slot="1"/>
+        </require>
+        <require name="Type">
+            <type id="io_in">IO</type>
+            <type id="printable">Integer</type>
+        </require>
+        <ensure name="Sinks">
+            <sink   id="io_out" slot="0"/>
+        </ensure>
+        <ensure name="Type">
+            <type id="io_out">IO</type>
+        </ensure>
    </method>
 </fbml>

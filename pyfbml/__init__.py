@@ -12,21 +12,22 @@ import logging
 log = logging.getLogger('pyfbml')
 
 def Setup():
-    """ Returns an instance of the LazyVisitor """
     from .dataflow import visitors
-    global Visitor;
-    Visitor = visitors.Visitor
+    global DataFlowVisitor;
+    global ControlFlowVisitor
+    ControlFlowVisitor = visitors.ControlFlowVisitor
+    DataFlowVisitor = visitors.DataFlowVisitor
 
 def getExtensions(*args):
     """
     Returns some of the std extensions, form the names given
     in args
     """
-    from .dataflow.format import xmlFormats
-    from .dataflow.parser import XMLExtensionFormats
+    from .dataflow.extensions import formatters 
+    from .dataflow.xmlformat import XMLExtensionFormats
     args = list(args)
     args.extend(['Sources','Sinks'])
-    return XMLExtensionFormats((a,xmlFormats[a]()) for a in args)
+    return XMLExtensionFormats((a,formatters[a]()) for a in args)
 
 def importModule(modulename,extension=None,paths=None):
     """
@@ -46,7 +47,13 @@ def importModule(modulename,extension=None,paths=None):
     paths.append(os.getcwd())
     
     from .dataflow import module 
-    env = module.BuildEnvironment(extension,paths)
+    from .dataflow import xmlformat
+    env = module.BuildEnvironment(paths,xmlformat.XMLParser(extension))
     return module.build(modulename,env)
 
+
+def saveModule(module,filelike,extensions):
+    from .dataflow import xmlformat
+    return xmlformat.XMLWriter(extensions).write(module,filelike)
+    
 Setup()

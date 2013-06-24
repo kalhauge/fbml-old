@@ -12,11 +12,13 @@ setup(
     long_description=open('README.rst').read(),
     scripts=[
         'bin/compilers/flow2dot',
+        'bin/compilers/flow2llvm',
         'bin/optimizers/fbml-type'
         ],
     packages=[
         'pyfbml',
         'pyfbml.dataflow',
+        'pyfbml.dataflow.extensions',
         'pyfbml.test',
         ],
 )
