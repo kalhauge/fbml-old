@@ -1,5 +1,5 @@
 from .. import xmlformat
-from .. import visitor
+from .. import visitors
 
 import xml.etree.ElementTree as ET
 
@@ -37,7 +37,7 @@ class has_types (object):
     def match(self,match):
         return self.matcher.match(match)
 
-class TypeDistributor (visitor.DataFlowVisitor):
+class TypeDistributor (visitors.DataFlowVisitor):
 
     def setup(self,method):
         for slot,name in method.getRequirements('Sources').items():

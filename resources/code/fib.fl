@@ -33,12 +33,12 @@
 
         <function id="f1">
             <extend name="MethodName">Constant</extend>
-            <sink slot="0" id="n1" />
+            <sink slot="0" id="c1" />
         </function>
 
         <function id="f2">
             <extend name="MethodName">Constant</extend>
-            <sink slot="0" id="n2" />
+            <sink slot="0" id="c2" />
         </function>
 
         <function id="f3">
@@ -63,15 +63,15 @@
 
         <function id="f6">
             <extend name="MethodName">Fibonacci</extend>
-            <source slot="0" sink_id="n1" />
-            <sink slot="0" id="f1" />
+            <source slot="0" sink_id="n2" />
+            <sink slot="0" id="f2" />
         </function>
 
         <function id="f7">
             <extend name="MethodName">Add</extend>
-            <source slot="0" sink_id="n1" />
-            <source slot="1" sink_id="n2" />
-            <sink slot="0" id="c" />
+            <source slot="0" sink_id="f1" />
+            <source slot="1" sink_id="f2" />
+            <sink slot="0" id="b" />
         </function>
 
     </impl>

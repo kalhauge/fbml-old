@@ -38,7 +38,27 @@
         </ensure>
         <ensure name="llvm">fadd</ensure>
     </method>
-    <!--
+
+    <method id="add-integer">
+        <require name="MethodName">Add</require>
+        <require name="Sources">  
+            <source id="a" slot="0"/>
+            <source id="b" slot="1"/>
+        </require>
+        <require name="Type">
+            <type slot="0">Integer</type>
+            <type slot="1">Integer</type>
+        </require>
+        <ensure name="Sinks">  
+            <sink id="c" slot="0"/>
+        </ensure>
+        <ensure name="Type">
+            <type slot="0">Integer</type>
+        </ensure>
+        <ensure name="llvm">sub</ensure>
+    </method>
+    
+<!--
     <method id="print-integer">
         <require name="MethodName">Print</require>
         <require name="Sources">

@@ -36,8 +36,7 @@ def main():
     sys.stdout.write( "  node [shape=record,style=rounded,height=0.1];\n")
     sys.stdout.write('  ' + '\n  '.join(DotVisitor().visit(impl)) + "\n")
 
-    for sid in method.getSinks():
-        sink = impl.getSink(sid)
+    for sink in method.getSinks():
         sys.stdout.write('  OUT_{} [label = "{}"];\n'.format(
                 sink.getId(),
                 sink.getId()))
@@ -57,9 +56,12 @@ class DotVisitor (pyfbml.ControlFlowVisitor):
         Setup initializes the list of lines which everythis is appended to
         """
         dotlines = [] 
-        for sink in method.getSources().values():
+        for sink in method.getSources():
             dotlines.append('IN_{} [label="{}"];'.format( sink, sink))
         return dotlines 
+
+    def final(self,dotlines): 
+        return dotlines
 
     def apply(self,function,dotlines):
         in_str = "|".join(["<source_{}>".format(s.getSink().getId()) 
