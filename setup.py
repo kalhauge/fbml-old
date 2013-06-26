@@ -16,9 +16,10 @@ setup(
         'bin/optimizers/fbml-type'
         ],
     packages=[
-        'pyfbml',
-        'pyfbml.dataflow',
-        'pyfbml.dataflow.extensions',
-        'pyfbml.test',
+        'fbml',
+        'fbml.util',
+        'fbml.parsers',
+        'fbml.extensions',
+        'fbml.test',
         ],
 )
