@@ -12,8 +12,7 @@ class SinksFormat(xmlformat.XMLExtensionFormat):
                     for sink in tree.findall('sink'))
 
     def writeEnsureToTree(self,ensure,tree):
-        tree_ens = ET.SubElement(tree,'ensure',{'name':self.getName()})
         for sid,slot in ensure.items():
-            ET.SubElement(tree_ens,'sink',{'slot':str(slot),'id':sid})
+            ET.SubElement(tree,'sink',{'slot':str(slot),'id':sid})
 
         

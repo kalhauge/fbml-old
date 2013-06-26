@@ -1,5 +1,7 @@
 from .. import xmlformat
+from .. import visitor
 
+import xml.etree.ElementTree as ET
 
 class TypeFormat (xmlformat.XMLExtensionFormat):
     def __init__(self): 
@@ -16,6 +18,48 @@ class TypeFormat (xmlformat.XMLExtensionFormat):
     def parse(self,tree):
         return Type.new(tree.find('type').text)
 
+    def writeRequireToTree(self,req,tree):
+        for slot,type_ in req.items():
+            ET.SubElement(tree,'type',{'slot':str(slot)}).text = type_.getName()
+
+    def writeEnsureToTree(self,req,tree):
+        for slot,type_ in req.items():
+            ET.SubElement(tree,'type',{'slot':str(slot)}).text = type_.getName()
+
+    def writeToTree(self,ext,tree):
+        ET.SubElement(tree,'type').text = ext.getName()
+
+class has_types (object):
+
+    def __init__(source_types):
+        self.matcher = require('Type',has_entries(source_types)),
+
+    def match(self,match):
+        return self.matcher.match(match)
+
+class TypeDistributor (visitor.DataFlowVisitor):
+
+    def setup(self,method):
+        for slot,name in method.getRequirements('Sources').items():
+            ['Type']
+        pass
+
+    def apply(self,function):
+        #Determine types
+        types = [(source.getSlot(),source.getSink()['Type'])
+                    for source in function.getSources()]
+
+        methodName = function['MethodName']
+        #Determine method
+        modules = module.getMethodsWhere(
+                all_of(
+                    has_types(types),
+                    has_mehtod_name(methodName),
+                    has_sources(),
+                    has_sinks()
+                    )
+                )
+        function.getSinks()
 class Type (object):
 
     @staticmethod
@@ -27,16 +71,16 @@ class Type (object):
 
 
 class Integer (Type):
-    def name(self): return "Integer"
+    def getName(self): return "Integer"
 
 class Real (Type):
-    def name(self): return "Real"
+    def getName(self): return "Real"
 
 class Char (Type):
-    def name(self): return "Char"
+    def getName(self): return "Char"
 
 class Unreal (Type):
-    def name(self): return "Unreal"
+    def getName(self): return "Unreal"
     def isUnreal(self): return True
 
 _types = {

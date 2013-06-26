@@ -50,6 +50,10 @@ class ExtendableModelObject(ModelObject):
         self._extensions = dict((ext.getName(),ext) for ext in extensions)
         return self
 
+    def setExtension(selg,name,item):
+        self._extensions[name] = item
+        return self
+
     def getExtension(self,name):
         return self._extensions[name].getData()
 
@@ -59,6 +63,8 @@ class ExtendableModelObject(ModelObject):
     def __getitem__(self,name): 
         return self.getExtension(name)
 
+    def __setitem__(self,name,item):
+        return self.setExtension(name,item)
 class Method (ModelObject):
 
     """

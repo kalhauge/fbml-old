@@ -10,21 +10,14 @@ log = logging.getLogger("flow2llvm")
 
 logging.basicConfig(level=logging.DEBUG)
 
-
-
-
 def main():
     args = parseArgs()
 
     ext = pyfbml.getExtensions('MethodName','Type')
-    
     module = pyfbml.importModule(args.modulename,ext)
-
     llvm_module = llvmc.Module.new(args.modulename)
     
-
     visitor = LLVMVisitor(module,llvm_module)
-      
     result = visitor.visit(module.getMethod(args.methodname).getImpl())
 
     print(llvm_module)

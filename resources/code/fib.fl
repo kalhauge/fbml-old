@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<fbml version="0.0">
+    
+    <method id="fib-zero-one">
+        <require name="MethodName">Fibonacci</require>
+        <require name="Sources">
+            <source slot="0" id="a" />
+        </require>
+        <ensure name="Sinks">
+            <sink slot="0" id="b" />
+        </ensure>
+    </method>
+
+    <impl method_id="fib-zero-one">
+        <function id="f1">
+            <extend name="MethodName">DoNothing</extend>
+            <source slot="0" sink_id="a" />
+            <sink slot="0" id="b" />
+        </function>
+    </impl>
+
+    <method id="fib-other">
+        <require name="MethodName">Fibonacci</require>
+        <require name="Sources">
+            <source slot="0" id="a" />
+        </require>
+        <ensure name="Sinks">
+            <sink slot="0" id="b" />
+        </ensure>
+    </method>
+
+    <impl method_id="fib-other">
+
+        <function id="f1">
+            <extend name="MethodName">Constant</extend>
+            <sink slot="0" id="n1" />
+        </function>
+
+        <function id="f2">
+            <extend name="MethodName">Constant</extend>
+            <sink slot="0" id="n2" />
+        </function>
+
+        <function id="f3">
+            <extend name="MethodName">Substract</extend>
+            <source slot="0" sink_id="a" />
+            <source slot="1" sink_id="c1" />
+            <sink slot="0" id="n1" />
+        </function>
+
+        <function id="f4">
+            <extend name="MethodName">Substract</extend>
+            <source slot="0" sink_id="a" />
+            <source slot="1" sink_id="c2" />
+            <sink slot="0" id="n2" />
+        </function>
+
+        <function id="f5">
+            <extend name="MethodName">Fibonacci</extend>
+            <source slot="0" sink_id="n1" />
+            <sink slot="0" id="f1" />
+        </function>
+
+        <function id="f6">
+            <extend name="MethodName">Fibonacci</extend>
+            <source slot="0" sink_id="n1" />
+            <sink slot="0" id="f1" />
+        </function>
+
+        <function id="f7">
+            <extend name="MethodName">Add</extend>
+            <source slot="0" sink_id="n1" />
+            <source slot="1" sink_id="n2" />
+            <sink slot="0" id="c" />
+        </function>
+
+    </impl>
+
+</fbml>

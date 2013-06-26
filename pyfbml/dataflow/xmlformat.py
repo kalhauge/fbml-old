@@ -13,6 +13,9 @@ from .. import exceptions
 from . import model
 from .parser import *
 
+import io
+import re
+
 class XMLWriter (object):
 
     def __init__(self,extendFormats):
@@ -25,8 +28,16 @@ class XMLWriter (object):
         self.writeExtensionsToTree(module.getExtensions(),root)
         self.writeMethodsToTree(module.getMethods(),root)
         e._setroot(root)
-        e.write(filelike,xml_declaration="1.0",encoding="unicode")
-        return e 
+        s = io.StringIO()
+        e.write(s,xml_declaration="1.0",encoding="unicode")
+        result = s.getvalue()
+        result = re.sub('(</[a-z]*>)',r'\1\n',result)
+        result = re.sub('(/\s*>)',r'\1\n',result)
+        result = re.sub('><',r'>\n<',result)
+        try: filelike.write(result);
+        except:
+            with open(filelike,'w') as f:
+                f.write(result)
 
     def writeMethodsToTree(self,methods,root):
         for method in methods: self.writeMethodToTree(method,root)
@@ -190,16 +201,19 @@ class XMLExtensionFormats (object):
         ensure.data = self.getExtendFormat(ensure.name).parseEnsure(tree_ensure)
 
     def writeToTree(self,extend,root):
+        tree = ET.SubElement(root,'extend',{'name':extend.getName()})
         self.getExtendFormat(extend.getName())\
-                .writeToTree(extend.getData(),root);
+                .writeToTree(extend.getData(),tree);
     
     def writeRequireToTree(self,extend,root):
+        tree = ET.SubElement(root,'require',{'name':extend.getName()})
         self.getExtendFormat(extend.getName())\
-                .writeRequireToTree(extend.getData(),root);
+                .writeRequireToTree(extend.getData(),tree);
     
     def writeEnsureToTree(self,extend,root):
+        tree = ET.SubElement(root,'ensure',{'name':extend.getName()})
         self.getExtendFormat(extend.getName())\
-                .writeEnsureToTree(extend.getData(),root);
+                .writeEnsureToTree(extend.getData(),tree);
 
 class XMLExtensionFormat (object):
 
@@ -220,11 +234,11 @@ class XMLExtensionFormat (object):
         return tree.text
 
     def writeToTree(self,data,tree):
-        ET.SubElement(tree,'extend',{'name':self.getName()}).text = str(data)
+        tree.text = str(data)
 
     def writeEnsureToTree(self,data,tree):
-        ET.SubElement(tree,'ensure',{'name':self.getName()}).text = str(data)
+        tree.text = str(data)
 
     def writeRequireToTree(self,data,tree):
-        ET.SubElement(tree,'require',{'name':self.getName()}).text = str(data)
+        tree.text = str(data)
 
