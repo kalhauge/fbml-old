@@ -8,7 +8,9 @@ Currently just an wrapper and extendtions of the :mod:`hamcrest` module.
 from hamcrest.core.base_matcher import BaseMatcher
 from hamcrest.core.helpers.hasmethod import hasmethod
 
-class require (BaseMatcher):
+class Matcher (BaseMatcher): pass
+
+class require (Matcher):
 
     def __init__(self,name,matcher):
         self._name = name

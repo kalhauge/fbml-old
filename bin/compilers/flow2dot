@@ -16,8 +16,7 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
-import pyfbml
-import pyfbml.dataflow
+import fbml
 
 
 def main():
@@ -26,10 +25,10 @@ def main():
 
     args = parser.parse_args();
 
-    ext = pyfbml.getExtensions('MethodName');                
+    ext = fbml.getExtensions('MethodName');                
     modulename, methodname = args.methodid.rsplit('.',1)
 
-    module = pyfbml.importModule(modulename,ext);
+    module = fbml.importModule(modulename,ext);
     method = module.getMethod(methodname);
     impl = method.getImpl();
     sys.stdout.write("digraph {\n")
@@ -46,7 +45,7 @@ def main():
                 sink.getId()))
     sys.stdout.write("}\n")
 
-class DotVisitor (pyfbml.ControlFlowVisitor):
+class DotVisitor (fbml.ControlFlowVisitor):
 
     def __init__(self):
         super(DotVisitor,self).__init__()

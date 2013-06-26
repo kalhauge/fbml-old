@@ -1,380 +1,149 @@
 """
-.. module:: pyfbml.dataflow.model
+.. module: fbml.core 
+    :platform: Unix
+    :synopsis: The dataflow.module module. This is used for all assosiations.
+.. moduleauthor: Christian Gram Kalhauge
 
-.. moduleauthor:: Christian Gram Kalhauge <s093273@student.dtu.dk>
-
-Model
-=====
-
-This module contains the dataflow model. The dataflow model contains of two main
-classes the :class:`~pyfbml.dataflow.model.Method` and the :class:`~pyfbml.dataflow.model.Impl`
-
-
-Method
-------
-.. autoclass:: pyfbml.dataflow.model.Method
-    :members:
-
-Implementation
---------------
-.. autoclass:: pyfbml.dataflow.model.Impl
-    :members:
-
-.. autoclass:: pyfbml.dataflow.model.NoneImpl
-    :members:
-
-Internal classes
-................
-
-.. autoclass:: pyfbml.dataflow.model.Function
-    :members:
-
-.. autoclass:: pyfbml.dataflow.model.Sink
-    :members:
-
-.. autoclass:: pyfbml.dataflow.model.Source
-    :members:
 """
+from . import model
+from .util import exceptions
 
-from .. import exceptions
+import os
 
-class ModelObject (object): pass
+def build(modulename,env):
+    return env.getModule(modulename) 
 
-class ExtendableModelObject(ModelObject):
-
+def readPath(modulename):
     """
-    The ExtendableModelObject allows the object to be extendable, with extensions.
+    Reads a modulename, and returns a list of module names
+    :param modulename: a . seperated list of the module path
     """
-
-    def setExtensions(self,extensions):
-        self._extensions = dict((ext.getName(),ext) for ext in extensions)
-        return self
-
-    def setExtension(selg,name,item):
-        self._extensions[name] = item
-        return self
-
-    def getExtension(self,name):
-        return self._extensions[name].getData()
-
-    def getExtensions(self):
-        return self._extensions
-
-    def __getitem__(self,name): 
-        return self.getExtension(name)
-
-    def __setitem__(self,name,item):
-        return self.setExtension(name,item)
-class Method (ModelObject):
-
-    """
-    The Method is the main id holder of the model, it controls the details
-    about the requirements and ensurances of the execution of the function.
-
-    :param ID: the ID of the method
-    :param requirements: the requirements of the method.
-    :param ensurances: the ensurences of the method.
-    """
-    def __init__(self,ID,requirements={},ensurances={}):
-        self._id = ID;
-        self._requirements = dict(requirements)
-        self._ensurances = dict(ensurances)
-        self._impl = NoneImpl() 
-
-    def getId(self):
-        """
-        :returns: the id of the method
-        """
-        return self._id
-    
-    def getRequirements(self):
-        """
-        :returns: the requirements of the method
-        """
-        return self._requirements
-
-    def getRequirement(self,name):
-        """
-        :returns: the requirement corresponding to the name
-        """
-        return self.getRequirements()[name].getData()
-
-    def getEnsurances(self):
-        """
-        :returns: the ensurances of the method
-        """
-        return self._ensurances
-
-    def getEnsurance(self,name):
-        """
-        :returns: the ensurance corresponding to the name
-        """
-        return self.getEnsurances()[name].getData()
-
-    def addEnsurances(self,ensurances):
-        """
-        :param ensurances: a sequence of ensurances
-        """
-        self.getEnsurances().update((ens.getName(),ens) for ens in ensurances)
-        return self
-
-    def addRequirements(self,requirements):
-        """
-        :param requirements: a sequence of requirements
-        """
-        self.getRequirements().update((req.getName(),req) for req in requirements)
-        return self
-
-    def getSources(self):
-        """
-        """
-        return [s for s in self.getRequirement('Sources').values()]
-
-    def getSinks(self):
-        """
-        """
-        impl = self.getImpl()
-        return [impl.getSink(s) for s in self.getEnsurance('Sinks')]
-
-    def setImpl(self,impl):
-        self._impl = impl
-        return self
-
-    def hasImpl(self):
-        """
-        :returns: ``True`` if the method, has an :class:`~pyfbml.dataflow.model.Impl`
-        """
-        return not isinstance(self._impl,NoneImpl) 
-
-    def getImpl(self):
-        """
-        :retruns: the implementation, might be of type :class:`~pyfbml.dataflow.model.NoneImpl`
-        """
-        return self._impl
-
-    def __repr__(self):
-        return '<method id="'+self._id+'">'
-
-    def __str__(self):
-        return 'Method "{}" : ({}) -> ({})'.format(
-                self._id,
-                ", ".join(i for i in self.getSources().values()),
-                ", ".join(i for i in self.getSinks()))
+    return modulename.split('.')
 
 
+class Builder (object):
 
-class Impl (ModelObject):
+    def __init__(self,paths,parser):
+        self._parser = parser
+        self._paths = paths
+        self._packageEnvironment = PackageEnvironment()
+        self._buildModules = set()
 
-    """
-    This is the implementation of the method.
+    def getModule(self,modulename):
+        mod = self.getPackageEnvironment().getModuleFromName(modulename)
+        if not mod in self._buildModules:
+            self.buildModule(mod)
+        return mod
 
-    :param method:
-        the method to implement.
-    
-    :param functions: 
-        a sequence containing elements of type :class:`~pyfbml.dataflow.model.Function`,
-        the default is an empty list.
-    
-    :param sinks:
-        a sequence containing elements of type :class:`~pyfbml.dataflow.model.Sink`,
-        the default is an empty list.
+    def parseModule(self,module):
+        pars = None
+        for path in self._paths:
+            try:
+                filename = os.path.join(path, self.getFilename(module))
+                with open(filename) as moduleFile:
+                    pars = self._parser.parse(moduleFile) 
+                    break
+            except IOError:
+                continue
+        if pars is None: 
+            raise IOError("Module {} not found in paths {}".format(
+                module,
+                self._paths))
+        return pars
 
-    """
+    def buildModule(self,module):
+        pars = self.parseModule(module)
+        module.setImports(self.getModule(imp) for imp in pars.imports)
+        module.setExtensions(pars.extensions)
+        module.setMethods(self.buildMethods(pars))
 
-    def __init__(self,method,functions=[],sinks={}):
-        self._method = method.setImpl(self)
-        self._functions = list(functions)
-        self._sinks = dict(sinks)
-
-
-    def addFunctions(self,functions):
-        """
-        Adds functions to the implementation
-
-        :param functions: 
-            a sequence of type :class:`~pyfbml.dataflow.model.Function`
-        """
-        self._functions.extend(functions)
-        return self
-
-    def addSinks(self,sinks):
-        """
-        Adds sinks to the implementation
-
-        :param functions: 
-            a sequence of type :class:`~pyfbml.dataflow.model.Sink`
-        """
-        self._sinks.update((sink.getId(),sink) for sink in sinks)
-        return self
-
-    def getSink(self,sid):
-        """
-        The method to uses to get any sink in the used in the implementation.
+    def buildMethods(self,pars):
+        methods = dict()
+        for pMethod in pars.methods:
+            method = model.Method(pMethod.id)
+            method.addRequirements(self.buildRequirements(pMethod.requirements))
+            method.addEnsurances(self.buildEnsurances(pMethod.ensurances))
+            methods[method.getId()] = method
         
-        :param sid:
-            the sid of the :class:`~pyfbml.dataflow.model.Sink` that should be 
-            found.
+        impls = [self.buildImpl(impl,methods) for impl in pars.impls]
+        return methods.values()
         
-        :returns: the :class:`~pyfbml.dataflow.model.Sink`, with id ``sid`` 
-        """ 
-        return self._sinks[sid]
+    def buildImpl(self,pImpl,methods):
+        from itertools import chain
+        impl = model.Impl(methods[pImpl.method_id])
+        sinks = chain.from_iterable((s for s in f.sinks) for f in pImpl.functions)
+        sinks = dict((sink.id,self.buildSink(sink)) for sink in sinks)
+        args = impl.getMethod().getRequirement('Sources').items()
+        sinks.update((sid,model.Sink(sid,slot)) for slot,sid in args)
+        impl.addSinks(sinks.values())
+        impl.addFunctions(self.buildFunction(f,sinks) for f in pImpl.functions)
+        return impl
 
-    def getFunctions(self):
-        """
-        :returns: the functions used in the implementation.
-        """
-        return self._functions
+    def buildFunction(self,pFunc,sinks):
+        func = model.Function(pFunc.id)
+        func.addSinks(sinks[sink.id] for sink in pFunc.sinks)
+        func.addSources(self.buildSource(source,sinks) for source in pFunc.sources)
+        func.setExtensions(self.buildExtensions(pFunc.extends))
+        func.connect()
+        return func
 
-    def getSinks(self):
-        """
-        :returns: the sinks used in the implementations.
-        """
-        return self._sinks
+    def buildRequirements(self,pReqs):
+        return (model.Require(req.name,req.data) for req in pReqs) 
 
-    def getMethod(self):
-        """
-        :returns: the implemented :class:`~pyfbml.dataflow.model.Method`
-        """
-        return self._method
+    def buildEnsurances(self,pEns):
+        return (model.Ensure(ens.name,ens.data) for ens in pEns)
 
-    def __repr__(self):
-        return '<impl method={!r} functions={} sinks={}>'.format(
-                self._method,
-                len(self._functions),
-                len(self._sinks))
+    def buildExtensions(self,pExt):
+        return (model.Extend(ens.name,ens.data) for ens in pExt)
 
-class NoneImpl (Impl):
-    """
-    A None implementations, indicating no implementation. 
-    """
-    def __init__(self) : pass
+    def buildSink(self,sink):
+        return model.Sink(sink.id,sink.slot).setExtensions(
+                self.buildExtensions(sink.extends))
 
-class Function (ExtendableModelObject):
-    """
-    The function is the function call of fbml. Its primary function is to 
-    provide data to help determine which method to be used on the sources,
-    of the function to generate the data supoced to go to the sinks.
+    def buildSource(self,source,sinks):
+        return model.Source(sinks[source.sink_id],source.slot).setExtensions(
+                self.buildExtensions(source.extends))
+        
+    def getFilename(self,element):
+        return self.getPackageEnvironment().getFilename(element)
 
-    :param sid:
-        the id of the function, which is used to identify the function later
-        and when associating extentions to it.
+    def getPackageEnvironment(self):
+        return self._packageEnvironment
 
-    """
-    def __init__(self,sid,sources=[],sinks=[]):
-        self._id = sid;
-        self._sinks = list(sinks)
-        self._sources = list(sources)
+    def addBuildModule(self,module):
+        self._buildModules.add(module)
+        return self
 
-    def connect(self):
-        for sink in self._sinks:
-            sink.addFunction(self);
-        for source in self._sources:
-            source.addFunction(self);
+class PackageEnvironment(object):
+   
+    def __init__(self):
+        self._rootPackage = model.RootPackage() 
 
-    def addSinks(self,sinks):
-        self._sinks.extend(sinks)
-
-    def addSources(self,sources):
-        self._sources.extend(sources)
-
-    def getSources(self):
-        return self._sources;
-
-    def getSinks(self):
-        return self._sinks;
-
-    def getId(self):
-        return self._id;
-
-    def __repr__(self):
-        return '<function id="{}" >'.format(self._id);
-
-    def depth(self,helper):
-        if not self in helper:
-            if len(self.getSources()) == 0: depth = 0;
-            else: depth = max(src.depth(helper) for src in self.getSources()) +1
-            helper[self] = depth;
-        return helper[self]
-
-    def getType(self): return "function"
-
-
-class Sink (ExtendableModelObject):
-    def __init__(self,sid,slot):
-        self._id = sid;
-        self._slot = slot
-        self._function = None
-        self._users = [];
+    def getFilename(self,element):
+        return os.path.join(*element.getName().split('.')) + '.fl'
+        
+    def getModuleFromName(self,modulename):
+        return self.getModule(readPath(modulename))
     
-    def addFunction(self,function):
-        self._function = function;
+    def getModule(self,module_path):
+        return self.getPackage(module_path[:-1]).getModule(module_path[-1])
 
-    def getFunction(self):
-        return self._function;
-
-    def __repr__(self):
-        return '<sink id="'+self._id+'">'
-
-    def getId(self):
-        return self._id
-
-    def getSlot(self):
-        return self._slot
-
-    def addUser(self,source):
-        self._users.append(source);
-
-    def getUsers(self):
-        return self._users;
-
-    def depth(self,helper):
-        if not self in helper:
-            if self.getFunction() is None: depth = 0;
-            else: depth = self.getFunction().depth(helper) + 1;
-            helper[self] = depth;
-        return helper[self]
-
-    def getType(self): return "sink"
-
-class Source (ExtendableModelObject):
-    def __init__(self,sink,slot):
-        self._sink = sink;
-        self._slot = slot;
-        sink.addUser(self);
-
-    def addFunction(self,function):
-        self._function = function;
-
-    def getSink(self):
-        return self._sink;
-
-    def getSlot(self):
-        return self._slot
+    def getPackage(self,module_path):
+        if len(module_path) == 0:
+            return self.getRootPackage()
+        else:
+            return self.getPackage(module_path[:-1]).getPackage(module_path[-1])
     
-    def getFunction(self):
-        return self._function
-
-    def __repr__(self):
-        return '<source sink={} > '.format(self._sink);
-
-    def depth(self,helper):
-        if not self in helper:
-            helper[self] = self.getSink().depth(helper) + 1;
-        return helper[self]
+    def getRootPackage(self):
+        return self._rootPackage
 
 
+def readPath(modulename):
+    """
+    Reads a modulename, and returns a list of module names
+    :param modulename: a . seperated list of the module path
+    """
+    return modulename.split('.')
 
-class Extend (ModelObject):
 
-    def __init__(self,name,data):
-        self._name = name
-        self._data = data
 
-    def getName(self):
-        return self._name
-
-    def getData(self):
-        return self._data
-
-class Ensure (Extend) : pass
-class Require (Extend) : pass 

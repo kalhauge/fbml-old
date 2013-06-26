@@ -1,5 +1,5 @@
 """
-.. module:: pyfbml.dataflow.xmlformat
+.. module:: fbml.parsers.xmlformat
 
 """
 
@@ -9,8 +9,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from .. import exceptions
-from . import model
+from ..util import exceptions
 from .parser import *
 
 import io
@@ -19,7 +18,7 @@ import re
 class XMLWriter (object):
 
     def __init__(self,extendFormats):
-        self._extendFormats = extendFormats;
+        self._extensions = extendFormats;
 
     def write(self,module,filelike):
         e = ET.ElementTree()
@@ -90,22 +89,22 @@ class XMLWriter (object):
         self.writeExtendsToTree(sink.getExtensions(),elm)
 
     def writeRequirementsToTree(self,reqs,root):
-        for req in reqs.values(): self._extendFormats.writeRequireToTree(req,root)
+        for req in reqs.values(): self._extensions.writeRequireToTree(req,root)
 
     def writeEnsurancesToTree(self,ens,root):
-        for en in ens.values(): self._extendFormats.writeEnsureToTree(en,root)
+        for en in ens.values(): self._extensions.writeEnsureToTree(en,root)
 
     def writeExtendsToTree(self,exts,root):
-        for ext in exts.values(): self._extendFormats.writeToTree(ext,root)
+        for ext in exts.values(): self._extensions.writeToTree(ext,root)
 
 
 class XMLParser (object):
 
     def __init__(self,extendFormats):
-        self._extendFormats = extendFormats
+        self._extensions = extendFormats
 
     def getExtendFormats(self):
-        return self._extendFormats
+        return self._extensions
 
     def parse(self,filelike):
         return self.parseModule(ET.parse(filelike).getroot())
@@ -138,12 +137,12 @@ class XMLParser (object):
 
     def parseRequire(self,tree_require):
         require = Require(**tree_require.attrib);
-        self._extendFormats.parseRequire(require,tree_require)
+        self._extensions.parseRequire(require,tree_require)
         return require
 
     def parseEnsure(self,tree_ensure): 
         ensure = Ensure(**tree_ensure.attrib)
-        self._extendFormats.parseEnsure(ensure,tree_ensure)
+        self._extensions.parseEnsure(ensure,tree_ensure)
         return ensure
 
     def parseSink(self,tree_sink):
@@ -158,7 +157,7 @@ class XMLParser (object):
         
     def parseExtend(self,tree_extend):
         extend = Extend(**tree_extend.attrib)
-        self._extendFormats.parse(extend,tree_extend)
+        self._extensions.parse(extend,tree_extend)
         return extend
 
     def parseImport(self,tree_import):
@@ -175,16 +174,16 @@ class XMLParser (object):
 class XMLExtensionFormats (object):
 
     def __init__(self,extendFormats={}):
-        self._extendFormats = dict(extendFormats)
+        self._extensions = dict(extendFormats)
 
     def addExtensionFormat(self,eformat):
         self.addExtensionFormat({eformat.getName():eformat})
 
     def addExtensionFormats(self,formats):
-        self._extendFormats.update(formats)
+        self._extensions.update(formats)
 
     def getExtendFormat(self,name):
-        try: return self._extendFormats[name]
+        try: return self._extensions[name].XML_FORMAT
         except KeyError:
             log.warning(
                     'Found name %s, no known extension parser', 

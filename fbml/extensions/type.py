@@ -1,5 +1,8 @@
-from .. import xmlformat
-from .. import visitors
+from . import Extension
+from ..util import matchers
+from ..util import exceptions
+from ..util import visitors
+from ..parsers import xmlformat 
 
 import xml.etree.ElementTree as ET
 
@@ -32,7 +35,7 @@ class TypeFormat (xmlformat.XMLExtensionFormat):
 class has_types (object):
 
     def __init__(source_types):
-        self.matcher = require('Type',has_entries(source_types)),
+        self.matcher = matchers.require('Type',matchers.has_entries(source_types)),
 
     def match(self,match):
         return self.matcher.match(match)
@@ -60,6 +63,8 @@ class TypeDistributor (visitors.DataFlowVisitor):
                     )
                 )
         function.getSinks()
+
+
 class Type (object):
 
     @staticmethod
@@ -89,3 +94,10 @@ _types = {
         'Char' : Char,
         'Unreal' : Unreal
         }
+
+
+class TypeExtension(Extension):
+    NAME = "Type"
+    XML_FORMAT = TypeFormat()
+
+

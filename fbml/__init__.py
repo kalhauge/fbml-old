@@ -1,5 +1,5 @@
 """
-.. module:: pyfbml
+.. module:: fbml
     :platform: Unix
     :synopsis: This module controlls the pyfbml interface.
 
@@ -9,10 +9,10 @@
 class MallformedFlowError (Exception) : pass
 
 import logging
-log = logging.getLogger('pyfbml')
+log = logging.getLogger('fbml')
 
 def Setup():
-    from .dataflow import visitors
+    from .util import visitors
     global DataFlowVisitor;
     global ControlFlowVisitor
     ControlFlowVisitor = visitors.ControlFlowVisitor
@@ -23,11 +23,11 @@ def getExtensions(*args):
     Returns some of the std extensions, form the names given
     in args
     """
-    from .dataflow.extensions import formatters 
-    from .dataflow.xmlformat import XMLExtensionFormats
+    from .extensions import extensions 
+    from .parsers.xmlformat import XMLExtensionFormats
     args = list(args)
     args.extend(['Sources','Sinks'])
-    return XMLExtensionFormats((a,formatters[a]()) for a in args)
+    return XMLExtensionFormats(extensions[a]().getDictTuble() for a in args)
 
 def importModule(modulename,extension=None,paths=None):
     """
@@ -36,7 +36,7 @@ def importModule(modulename,extension=None,paths=None):
 
     :param modulename: the name of the module, a dot sperated list
     :param paths: extra search paths beound the $FBMLPATH.
-    :returns: A :class:`~pyfbml.dataflow.module.Module`
+    :returns: A :class:`~fbml.model.Module`
     """
     import os
     if paths is None: paths = []
@@ -46,14 +46,14 @@ def importModule(modulename,extension=None,paths=None):
 
     paths.append(os.getcwd())
     
-    from .dataflow import module 
-    from .dataflow import xmlformat
-    env = module.BuildEnvironment(paths,xmlformat.XMLParser(extension))
-    return module.build(modulename,env)
+    from . import core 
+    from .parsers import xmlformat
+    builder = core.Builder(paths,xmlformat.XMLParser(extension))
+    return builder.getModule(modulename)
 
 
 def saveModule(module,filelike,extensions):
-    from .dataflow import xmlformat
+    from .parsers import xmlformat
     return xmlformat.XMLWriter(extensions).write(module,filelike)
     
 Setup()

@@ -4,14 +4,17 @@ Adds types to the flow.
 """
 import sys
 
-import pyfbml
+import fbml
+import fbml.extensions.type as typeext
 
 def main():
     args = parseArgs()
   
-    ext = pyfbml.getExtensions('MethodName','Type')
+    ext = fbml.getExtensions('MethodName','Type')
     
-    module = pyfbml.importModule(args.modulename,ext)
+    module = fbml.importModule(args.modulename,ext)
+
+    new_module = typeext.TypeDistributor().visit(module)
 
     pyfbml.saveModule(module,sys.stdout if args.output is None else args.output,ext) 
 
