@@ -12,8 +12,12 @@ class has_method_name (matchers.Matcher):
     def __init__(self,method_name):
         self._method_name = method_name
 
-    def match(self,method):
+    def _matches(self,method):
         return method.getRequirement('MethodName') == self._method_name
+
+    def describe_to(self,description):
+        description.append('has method name of ')
+        description.append(self._method_name)
 
 
 class MethodNameExtension (Extension):

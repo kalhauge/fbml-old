@@ -32,8 +32,11 @@ class has_sinks_length (matchers.Matcher):
     def __init__(self,length):
         self._length = length
 
-    def match (self,method):
-        return self._length == len(method.getSinks())
+    def _matches (self,method):
+        return self._length == len(method.getEnsurance('Sinks'))
+
+    def describe_to(self,description):
+        description.append("has {} number of sinks".format(self._length))
 
 class SinksExtension(Extension):
     NAME = "Sinks"

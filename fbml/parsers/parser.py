@@ -2,6 +2,7 @@
 .. module:: pyfbml.dataflow.parser
 
 """
+from ..util import exceptions
 class ParseObject(object):
     
     def __init__(self,**kargs):
@@ -13,7 +14,7 @@ class ParseObject(object):
         attributes = self.requriedAttributes()
         for attr in attributes:
             if not hasattr(self,attr):
-                raise MallformedFlowError(
+                raise exceptions.MallformedFlowError(
                     "{} needs the attribute {}".format(self,attr)
                     )
 

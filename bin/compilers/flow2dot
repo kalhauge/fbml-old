@@ -30,10 +30,9 @@ def main():
 
     module = fbml.importModule(modulename,ext);
     method = module.getMethod(methodname);
-    impl = method.getImpl();
     sys.stdout.write("digraph {\n")
     sys.stdout.write( "  node [shape=record,style=rounded,height=0.1];\n")
-    sys.stdout.write('  ' + '\n  '.join(DotVisitor().visit(impl)) + "\n")
+    sys.stdout.write('  ' + '\n  '.join(DotVisitor().visit(method)) + "\n")
 
     for sink in method.getSinks():
         sys.stdout.write('  OUT_{} [label = "{}"];\n'.format(
@@ -56,7 +55,7 @@ class DotVisitor (fbml.ControlFlowVisitor):
         """
         dotlines = [] 
         for sink in method.getSources():
-            dotlines.append('IN_{} [label="{}"];'.format( sink, sink))
+            dotlines.append('IN_{} [label="{}"];'.format( sink.getId(), sink.getId()))
         return dotlines 
 
     def final(self,dotlines): 

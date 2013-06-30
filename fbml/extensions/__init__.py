@@ -24,7 +24,7 @@ class Extension (object):
 
 
 
-from . import type, methodname, sources, sinks
+from . import type, methodname, sources, sinks, llvm
 
 
 extensions = {
@@ -32,4 +32,5 @@ extensions = {
         "MethodName" : methodname.MethodNameExtension,
         "Sources"    : sources.SourcesExtension,
         "Sinks"      : sinks.SinksExtension,
+        "LLVM"       : llvm.LLVMExtension,
         }

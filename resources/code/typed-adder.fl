@@ -1,0 +1,193 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<fbml version="0.0">
+<import>stdlib</import>
+<extension>Type</extension>
+<extension>Value</extension>
+<extension>MethodName</extension>
+<extension>Constant</extension>
+<method id="m1">
+<require name="MethodName">Main</require>
+<require name="Sources">
+<source id="a" slot="0" />
+<source id="b" slot="1" />
+</require>
+<require name="Type">
+<type slot="0">Integer</type>
+<type slot="1">Integer</type>
+</require>
+<ensure name="Type">
+<type slot="0">Integer</type>
+</ensure>
+<ensure name="Sinks">
+<sink id="c" slot="0" />
+</ensure>
+</method>
+<impl method_id="m1">
+<function id="f_add">
+<extend name="MethodName">Add</extend>
+<source sink_id="a" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<source sink_id="b" slot="1">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<sink id="c" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</sink>
+</function>
+</impl>
+<method id="multi-add">
+<require name="MethodName">MultiAdd</require>
+<require name="Sources">
+<source id="a" slot="0" />
+<source id="b" slot="1" />
+<source id="c" slot="2" />
+<source id="d" slot="3" />
+</require>
+<require name="Type">
+<type slot="0">Integer</type>
+<type slot="1">Integer</type>
+<type slot="2">Integer</type>
+<type slot="3">Integer</type>
+</require>
+<ensure name="Type">
+<type slot="0">Integer</type>
+</ensure>
+<ensure name="Sinks">
+<sink id="e" slot="0" />
+</ensure>
+</method>
+<impl method_id="multi-add">
+<function id="f_add2">
+<extend name="MethodName">Add</extend>
+<source sink_id="c" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<source sink_id="d" slot="1">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<sink id="n2" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</sink>
+</function>
+<function id="f_add3">
+<extend name="MethodName">Add</extend>
+<source sink_id="n1" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<source sink_id="n2" slot="1">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<sink id="e" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</sink>
+</function>
+<function id="f_add1">
+<extend name="MethodName">Add</extend>
+<source sink_id="a" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<source sink_id="b" slot="1">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<sink id="n1" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</sink>
+</function>
+</impl>
+<method id="multi-add-five">
+<require name="MethodName">MultiAdd</require>
+<require name="Sources">
+<source id="a" slot="0" />
+<source id="b" slot="1" />
+<source id="c" slot="2" />
+<source id="d" slot="3" />
+<source id="e" slot="4" />
+</require>
+<require name="Type">
+<type slot="0">Integer</type>
+<type slot="1">Integer</type>
+<type slot="2">Integer</type>
+<type slot="3">Integer</type>
+<type slot="4">Integer</type>
+</require>
+<ensure name="Type">
+<type slot="0">Integer</type>
+</ensure>
+<ensure name="Sinks">
+<sink id="f" slot="0" />
+</ensure>
+</method>
+<impl method_id="multi-add-five">
+<function id="f_add">
+<extend name="MethodName">MultiAdd</extend>
+<source sink_id="a" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<source sink_id="b" slot="1">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<source sink_id="c" slot="2">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<source sink_id="d" slot="3">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<sink id="n1" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</sink>
+</function>
+<function id="f_add3">
+<extend name="MethodName">Add</extend>
+<source sink_id="n1" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<source sink_id="e" slot="1">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</source>
+<sink id="f" slot="0">
+<extend name="Type">
+<type>Integer</type>
+</extend>
+</sink>
+</function>
+</impl>
+</fbml>

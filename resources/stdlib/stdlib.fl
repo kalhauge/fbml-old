@@ -39,8 +39,8 @@
         <ensure name="llvm">fadd</ensure>
     </method>
 
-    <method id="add-integer">
-        <require name="MethodName">Add</require>
+    <method id="sub-integer">
+        <require name="MethodName">Substract</require>
         <require name="Sources">  
             <source id="a" slot="0"/>
             <source id="b" slot="1"/>

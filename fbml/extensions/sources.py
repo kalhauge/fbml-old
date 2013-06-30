@@ -31,8 +31,12 @@ class has_sources_length (matchers.Matcher):
     def __init__(self,length):
         self._length = length
 
-    def match (self,method):
-        return self._length == len(method.getSources())
+    def _matches (self,method):
+        return self._length == len(method.getRequirement('Sources'))
+
+    def describe_to(self,description):
+        description.append("has {} number of sources".format(self._length))
+
 
 
 class SourcesExtension(Extension):

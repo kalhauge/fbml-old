@@ -1,137 +1,32 @@
 #!python
 
 import argparse
-import pyfbml
-import hamcrest as hc
 import llvm.core as llvmc
-import logging
+import llvm.ee as llvmee
 
+import logging
 log = logging.getLogger("flow2llvm")
+
+import fbml
+from fbml.extensions.llvm import LLVMMethodCreater
+from fbml.extensions.llvm import compileToLLVM
 
 logging.basicConfig(level=logging.DEBUG)
 
 def main():
     args = parseArgs()
 
-    ext = pyfbml.getExtensions('MethodName','Type')
-    module = pyfbml.importModule(args.modulename,ext)
-    llvm_module = llvmc.Module.new(args.modulename)
-    
-    visitor = LLVMVisitor(module,llvm_module)
-    result = visitor.visit(module.getMethod(args.methodname).getImpl())
-
+    ext = fbml.getExtensions('MethodName','Type')
+    module = fbml.importModule(args.modulename,ext)
+    llvm_module = compileToLLVM(module)
     print(llvm_module)
 
 
-type_map = {
-        'Integer':llvmc.Type.int(),
-        'Real':llvmc.Type.double(),
-        'Char':llvmc.Type.int(8)
-        }
-
-def llvm_types(fbml_type):
-    for t in fbml_type: 
-        if not t.isUnreal(): 
-            yield type_map[t.name()]
-
-class LLVMVisitor(pyfbml.ControlFlowVisitor):
-
-    def __init__(self,module,llvm_module):
-        super(LLVMVisitor,self).__init__()
-        self._module = module
-        self._llvm_module = llvm_module
-
-    def setup(self,method):
-        impl = method.getImpl()
-        print(method.getRequirement('Type'))
-        args_types = list(llvm_types(
-                method.getRequirement('Type')[i] for i,s in enumerate(method.getSources())
-                ))
-        ret_types =  llvm_types(
-                method.getEnsurance('Type')[i] for i,s in enumerate(method.getSinks())
-                )
-        args_types.extend(llvmc.Type.pointer(ret) for ret in ret_types)
-        function = llvmc.Function.new(
-                self._llvm_module,
-                llvmc.Type.function(llvmc.Type.void(),list(args_types)),
-                method.getId()
-                )
-        i = 0;
-        argnames = list(x for i,x in enumerate(method.getSources())
-                if not method.getRequirement('Type')[i].isUnreal())
-        argnames.extend(s.getId() for i,s in enumerate(method.getSinks())
-                if not method.getEnsurance('Type')[i].isUnreal()) 
-        for arg,name in zip(function.args,argnames):
-            arg.name = name
-            self.set(method.getImpl().getSink(name),arg)
-        
-        blok = function.append_basic_block('entry')
-        return llvmc.Builder.new(blok) 
-
-    def final(self,bldr):
-        bldr.ret_void()
-        return bldr
-
-    def apply(self,function,bldr):
-        from pyfbml.dataflow.module import require
-        methodname = function['MethodName']
-
-        if methodname == "Constant":
-           sink = function.getSinks()[0]
-           rst = llvmc.Constant.int(llvmc.Type.int(),42)
-           self.set(sink,rst)
-        else:
-            types = dict((i,s['Type']) for i,s in enumerate(function.getSources()))
-            methods = self._module.getMethodWhere(
-                    hc.all_of(
-                        require('MethodName',
-                            hc.equal_to(methodname)
-                            ),
-                        require('Sources',
-                            hc.has_length(
-                                len(function.getSources())
-                                )
-                            ),
-                        require('Type',
-                            hc.has_entries(types)
-                            )
-                        )
-                    )
-                    
-            if len(methods) == 0: 
-                log.error("No found method for %s",methodname)
-                return
-            if len(methods) > 1: 
-                log.error("Multible methods found for %s, %s",
-                    methodname,
-                    methods)
-                return
-            method = methods[0]
-            if method.hasImpl():
-                required = self.visit(method.getImpl())
-            else:
-                llvm_func = method.getEnsurance('llvm')
-                if llvm_func == "print": return bldr
-                srcs = [self.get(s.getSink()) for s in function.getSources() ]
-                sink = function.getSinks()[0]
-                
-                rst = getattr(bldr,llvm_func)(
-                        srcs[0],srcs[1],sink.getId())
-                try:
-                    # Can only happen if it is the return type
-                    # In which case it would also be a pointer
-                    old = self.get(sink)
-                    bldr.store(rst,old)
-                except KeyError: 
-                    self.set(sink,rst)
-
-        return bldr 
 
 def parseArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('methodid',help='the fullpath id of the method')
+    parser.add_argument('modulename',help='the fullpath id of module')
     args = parser.parse_args()
-    args.modulename, args.methodname = args.methodid.rsplit('.',1)
     return args
 
 if __name__ == '__main__': main()

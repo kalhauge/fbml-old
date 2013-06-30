@@ -63,7 +63,7 @@ class Builder (object):
             method = model.Method(pMethod.id)
             method.addRequirements(self.buildRequirements(pMethod.requirements))
             method.addEnsurances(self.buildEnsurances(pMethod.ensurances))
-            methods[method.getId()] = method
+            methods[method.getInternalId()] = method
         
         impls = [self.buildImpl(impl,methods) for impl in pars.impls]
         return methods.values()

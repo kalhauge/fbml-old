@@ -18,25 +18,100 @@
         <ensure name="Sinks">
             <sink slot="0" id="c" />
         </ensure>
-        <ensure name="Type">
-            <type slot="0">Integer</type>
-        </ensure>
     </method>
 
     <impl method_id="m1">
         <function id="f_add">
             <extend name="MethodName">Add</extend> 
-            <source sink_id="a" slot="0">
-                <extend name="Type">
-                    <type>Integer</type>
-                </extend>
-            </source>
-            <source sink_id="b" slot="1">
-                <extend name="Type">
-                    <type>Integer</type>
-                </extend>
-            </source>
+            <source sink_id="a" slot="0" />
+            <source sink_id="b" slot="1" />
             <sink id="c" slot="0"/>
         </function>
     </impl> 
+
+
+    <method id="multi-add">
+        <!-- MultiAdd(a,b,c,d) : (a+b) + (c+d) -->
+        <require name="MethodName">MultiAdd</require>
+        <require name="Sources">
+            <source slot="0" id="a" />
+            <source slot="1" id="b" />  
+            <source slot="2" id="c" />
+            <source slot="3" id="d" />  
+        </require>
+        <require name="Type">
+            <type slot="0">Integer</type>
+            <type slot="1">Integer</type>
+            <type slot="2">Integer</type>
+            <type slot="3">Integer</type>
+        </require>
+        <ensure name="Sinks">
+            <sink id="e" slot="0"/>
+        </ensure>
+    </method>
+
+
+    <impl method_id="multi-add">
+        <function id="f_add1">
+            <extend name="MethodName">Add</extend>
+            <source slot="0" sink_id="a" />
+            <source slot="1" sink_id="b" />
+            <sink slot="0" id="n1" />
+        </function> 
+        <function id="f_add2">
+            <extend name="MethodName">Add</extend>
+            <source slot="0" sink_id="c" />
+            <source slot="1" sink_id="d" />
+            <sink slot="0" id="n2" />
+        </function> 
+        <function id="f_add3">
+            <extend name="MethodName">Add</extend>
+            <source slot="0" sink_id="n1" />
+            <source slot="1" sink_id="n2" />
+            <sink slot="0" id="e" />
+        </function> 
+    </impl>
+
+    <method id="multi-add-five">
+        <!-- MultiAdd(a,b,c,d,e) : (a+b) + (c+d) + e -->
+        <require name="MethodName">MultiAdd</require>
+        <require name="Sources">
+            <source slot="0" id="a" />
+            <source slot="1" id="b" />  
+            <source slot="2" id="c" />
+            <source slot="3" id="d" />  
+            <source slot="4" id="e" />  
+        </require>
+        <require name="Type">
+            <type slot="0">Integer</type>
+            <type slot="1">Integer</type>
+            <type slot="2">Integer</type>
+            <type slot="3">Integer</type>
+            <type slot="4">Integer</type>
+        </require>
+        <ensure name="Sinks">
+            <sink id="f" slot="0"/>
+        </ensure>
+    </method>
+
+
+    <impl method_id="multi-add-five">
+        <function id="f_add">
+            <extend name="MethodName">MultiAdd</extend>
+            <source slot="0" sink_id="a" />
+            <source slot="1" sink_id="b" />
+            <source slot="2" sink_id="c" />
+            <source slot="3" sink_id="d" />
+            <sink slot="0" id="n1" />
+        </function> 
+        <function id="f_add3">
+            <extend name="MethodName">Add</extend>
+            <source slot="0" sink_id="n1" />
+            <source slot="1" sink_id="e" />
+            <sink slot="0" id="f" />
+        </function> 
+    </impl>
+
+
+
 </fbml>

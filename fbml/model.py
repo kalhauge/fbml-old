@@ -55,6 +55,8 @@ Package
 
 from .util import exceptions
 
+def tuble (obj):
+    return (obj.getId(),obj)
 
 class Module (object):
 
@@ -65,10 +67,13 @@ class Module (object):
         self._package = package 
 
     def setMethods(self,methods):
-        self._methods = dict((method.getId(),method) for method in methods)
+        for method in methods:
+            self.setMethod(method)
+        return self
 
     def setImports(self,imports):
         self._imports = list(imports)
+        return self
 
     def getImports(self):
         return self._imports
@@ -76,11 +81,24 @@ class Module (object):
     def getMethod(self,ID):
         return self._methods[ID];
 
-    def getMethodWhere(self,matcher):
+    def setMethod(self,method):
+        self._methods[method.getInternalId()] = method
+        method.setModule(self)
+        return self
+
+    def getMethodsWhere(self,matcher):
         results = [method for method in self.getMethods() if matcher.matches(method)]
         for imp in self.getImports():
-            results.extend(imp.getMethodWhere(matcher))
+            results.extend(imp.getMethodsWhere(matcher))
         return results
+
+    def getMethodWhere(self,matcher):
+        results = self.getMethodsWhere(matcher)
+        if len(results) > 1: 
+            raise exceptions.AmbiguousMethodCall(results,matcher)
+        elif len(results) == 0:
+            raise exceptions.NoMethodCall(matcher)
+        return results[0]
     
     def getMethods(self):
         return self._methods.values()
@@ -92,7 +110,7 @@ class Module (object):
         self._extensions = set(ext)
 
     def getId(self,name):
-        return self.getModuleName() + "." + name
+        return self.getName() + "." + name
 
     def getName(self):
         return self._package.getId(self._name)
@@ -147,19 +165,20 @@ class RootPackage (Package):
 
 
 class ModelObject (object): pass
-
 class ExtendableModelObject(ModelObject):
 
     """
     The ExtendableModelObject allows the object to be extendable, with extensions.
     """
+    def __init__(self):
+        self._extensions = dict()
 
     def setExtensions(self,extensions):
         self._extensions = dict((ext.getName(),ext) for ext in extensions)
         return self
 
-    def setExtension(selg,name,item):
-        self._extensions[name] = item
+    def setExtension(self,name,item):
+        self._extensions[name] = Extend(name,item)
         return self
 
     def getExtension(self,name):
@@ -173,6 +192,8 @@ class ExtendableModelObject(ModelObject):
 
     def __setitem__(self,name,item):
         return self.setExtension(name,item)
+
+        
 class Method (ModelObject):
 
     """
@@ -189,11 +210,21 @@ class Method (ModelObject):
         self._ensurances = dict(ensurances)
         self._impl = NoneImpl() 
 
+    def setModule(self,module):
+        self._module = module
+        return self
+
+    def getModule(self):
+        return self._module
+
+    def getInternalId(self):
+        return self._id
+
     def getId(self):
         """
         :returns: the id of the method
         """
-        return self._id
+        return self.getModule().getId(self.getInternalId())
     
     def getRequirements(self):
         """
@@ -219,6 +250,10 @@ class Method (ModelObject):
         """
         return self.getEnsurances()[name].getData()
 
+    def setEnsurance(self,name,data):
+        self.getEnsurances()[name] = Ensure(name,data)
+        return self
+
     def addEnsurances(self,ensurances):
         """
         :param ensurances: a sequence of ensurances
@@ -235,14 +270,25 @@ class Method (ModelObject):
 
     def getSources(self):
         """
+        Returns a list of orderet names of the sources.
         """
-        return [s for s in self.getRequirement('Sources').values()]
+        impl = self.getImpl()
+        sources = self.getRequirement('Sources')
+        ret_list = [None] * len(sources)
+        for i,s in sources.items():
+            ret_list[i] = impl.getSink(s)
+        return ret_list
 
     def getSinks(self):
         """
+        Returns a list of orderet :class:`~fbml.model.Sink`s 
         """
         impl = self.getImpl()
-        return [impl.getSink(s) for s in self.getEnsurance('Sinks')]
+        sinks = self.getEnsurance('Sinks')
+        ret_list = [None] * len(sinks)
+        for s,i in sinks.items():
+            ret_list[i] = impl.getSink(s) 
+        return ret_list
 
     def setImpl(self,impl):
         self._impl = impl
@@ -261,13 +307,13 @@ class Method (ModelObject):
         return self._impl
 
     def __repr__(self):
-        return '<method id="'+self._id+'">'
+        return '<method id="'+self.getId()+'">'
 
     def __str__(self):
         return 'Method "{}" : ({}) -> ({})'.format(
-                self._id,
-                ", ".join(i for i in self.getSources().values()),
-                ", ".join(i for i in self.getSinks()))
+                self.getId(),
+                ", ".join(i for i in self.getRequirement('Sources').values()),
+                ", ".join(i for i in self.getEnsurance('Sinks')))
 
 
 
@@ -351,6 +397,7 @@ class Impl (ModelObject):
                 len(self._functions),
                 len(self._sinks))
 
+
 class NoneImpl (Impl):
     """
     A None implementations, indicating no implementation. 
@@ -369,6 +416,7 @@ class Function (ExtendableModelObject):
 
     """
     def __init__(self,sid,sources=[],sinks=[]):
+        super(Function,self).__init__()
         self._id = sid;
         self._sinks = list(sinks)
         self._sources = list(sources)
@@ -409,6 +457,7 @@ class Function (ExtendableModelObject):
 
 class Sink (ExtendableModelObject):
     def __init__(self,sid,slot):
+        super(Sink,self).__init__()
         self._id = sid;
         self._slot = slot
         self._function = None
@@ -446,6 +495,7 @@ class Sink (ExtendableModelObject):
 
 class Source (ExtendableModelObject):
     def __init__(self,sink,slot):
+        super(Source,self).__init__()
         self._sink = sink;
         self._slot = slot;
         sink.addUser(self);
@@ -463,7 +513,7 @@ class Source (ExtendableModelObject):
         return self._function
 
     def __repr__(self):
-        return '<source sink={} > '.format(self._sink);
+        return '<source sink={} extend={}> '.format(self._sink,self.getExtensions());
 
     def depth(self,helper):
         if not self in helper:

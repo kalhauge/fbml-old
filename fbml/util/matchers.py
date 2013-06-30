@@ -5,11 +5,13 @@ Currently just an wrapper and extendtions of the :mod:`hamcrest` module.
 
 """
 
+import hamcrest.core as hc
 from hamcrest.core.base_matcher import BaseMatcher
 from hamcrest.core.helpers.hasmethod import hasmethod
 
 class Matcher (BaseMatcher): pass
 
+all_of = hc.all_of
 class require (Matcher):
 
     def __init__(self,name,matcher):

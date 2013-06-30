@@ -14,9 +14,14 @@ def main():
     
     module = fbml.importModule(args.modulename,ext)
 
-    new_module = typeext.TypeDistributor().visit(module)
+    def type_methods(method):
+        if 'Type' in  method.getEnsurances(): return method
+        return typeext.TypeSetter(module).visit(method)
+   
+    methods = [type_methods(method) for method in module.getMethods()]
+    for m in methods: module.setMethod(m)
 
-    pyfbml.saveModule(module,sys.stdout if args.output is None else args.output,ext) 
+    fbml.saveModule(module,sys.stdout if args.output is None else args.output,ext) 
 
 def parseArgs():
     import argparse

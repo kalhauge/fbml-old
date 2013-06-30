@@ -1,8 +1,6 @@
 
-
-def calculateRunorder(impl):
-    from collections import deque
-    sinks = impl.getMethod().getSinks()
+def calculateReachableFunctions(sinks):
+    from collections import deque 
     sources = []
     q = deque(sinks);
     f_set = set()        
@@ -17,7 +15,11 @@ def calculateRunorder(impl):
                         for source in function.getSources());
         else: sources.append(sink);
 
-    
+    return f_set
+
+def calculateRunorder(impl):
+    sinks = impl.getMethod().getSinks()
+    f_set = calculateReachableFunctions(sinks)
     helper = dict()
     return sorted(f_set,key=lambda a : a.depth(helper));        
 
@@ -25,46 +27,71 @@ def calculateRunorder(impl):
 class DataFlowVisitor (object):
 
     def __init__(self):
-        self._data = dict();
+        self._methods = dict()
 
-    def visit(self,impl):
+    def visit(self,method):
+        if method in self._methods:
+            return self._methods[method]
+        impl = method.getImpl()
         runorder = calculateRunorder(impl)
-        self.setup(impl.getMethod());
+        initial_sink_results = self.setup(method);
+        results = dict((s.getId(),initial_sink_results[s.getSlot()])
+                        for s in method.getSources())
         for function in runorder:
-            f_sinks = [source.getSink() for source in function.getSources()]
-            self.set(function,self.merge(f_sinks))
-
-            result = self.apply(function)
-            for sink in function.getSinks():
-                self.set(sink,result);
-        return self.merge(sinks);
+            sinks_results = (results[s.getSink().getId()] 
+                                for s in function.getSources())
+            source_results = self.merge(function,sinks_results)
+            results.update(self.apply(function,source_results))
+        ret_method = self.final(method,results)
+        self._methods[method] = ret_method
+        return ret_method
 
     def setup(self,method):
+        """
+        Recieves a method and for each source, returns a dict/list of start
+        information
+        """
+        pass
+    
+    def merge(self,function,sinks):
+        """
+        Recieves the results from sinks to a function and returns the resulting
+        values for the sources for the new function
+        """
         pass
 
-    def merge(self,sinks):
+    def apply(self,function,sources):
+        """
+        For each function take the sources and retun the sinks
+        the sources are slot oriented. The output sinks should orderd in 
+        a dict.
+        """
         pass
 
-    def apply(self,function):
+    def final(self,method,sinks):
+        """
+        Takes a dictionary of sinks names to results and the method, and returns
+        the result for visiting the method
+        """
         pass
 
-    def set(self,obj,data):
-        self._data[obj]=data;
-
-    def get(self,obj):
-        return self._data[obj];
 
 class ControlFlowVisitor (object):
 
     def __init__(self):
-        self._data = dict()
+        self._methods = dict()
 
-    def visit(self,impl):
+    def visit(self,method):
+        if method in self._methods:
+            return method
+        impl = method.getImpl()
         runorder = calculateRunorder(impl)
-        result = self.setup(impl.getMethod())
+        result = self.setup(method)
         for function in runorder:
             result = self.apply(function,result)
 
+        ret_method = self.final(method)
+        self._methods[method] = ret_method
         return self.final(result)
 
     def setup(self, method):
@@ -76,8 +103,3 @@ class ControlFlowVisitor (object):
     def final(self, result):
         pass
 
-    def set(self,obj,data):
-        self._data[obj]=data;
-
-    def get(self,obj):
-        return self._data[obj];

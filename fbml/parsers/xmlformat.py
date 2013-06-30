@@ -10,6 +10,7 @@ import logging
 log = logging.getLogger(__name__)
 
 from ..util import exceptions
+from .. import model
 from .parser import *
 
 import io
@@ -49,7 +50,7 @@ class XMLWriter (object):
             ET.SubElement(root,'extension').text = ext 
 
     def writeMethodToTree(self,method,root):
-        tree_method = ET.SubElement(root,'method',{'id':method.getId()})
+        tree_method = ET.SubElement(root,'method',{'id':method.getInternalId()})
        
         self.writeRequirementsToTree(method.getRequirements(),tree_method)
         self.writeEnsurancesToTree(method.getEnsurances(),tree_method)
@@ -58,7 +59,7 @@ class XMLWriter (object):
     def writeImplToTree(self,impl,root):
         if isinstance(impl,model.NoneImpl): return
 
-        tree_impl = ET.SubElement(root,'impl',{'method_id':impl.getMethod().getId()})
+        tree_impl = ET.SubElement(root,'impl',{'method_id':impl.getMethod().getInternalId()})
         self.writeFunctionsToTree(impl.getFunctions(),tree_impl)
 
     def writeFunctionsToTree(self,funcs,root):
@@ -76,7 +77,7 @@ class XMLWriter (object):
     def writeSourceToTree(self,source,root):
         elm = ET.SubElement(root,'source')
         elm.set('sink_id',source.getSink().getId())
-        elm.set('slot',source.getSlot())
+        elm.set('slot',str(source.getSlot()))
         self.writeExtendsToTree(source.getExtensions(),elm)
 
     def writeSinksToTree(self,sinks,root):
@@ -85,7 +86,7 @@ class XMLWriter (object):
     def writeSinkToTree(self,sink,root):
         elm = ET.SubElement(root,'sink')
         elm.set('id',sink.getId())
-        elm.set('slot',sink.getSlot())
+        elm.set('slot',str(sink.getSlot()))
         self.writeExtendsToTree(sink.getExtensions(),elm)
 
     def writeRequirementsToTree(self,reqs,root):
@@ -147,11 +148,13 @@ class XMLParser (object):
 
     def parseSink(self,tree_sink):
         sink = Sink(**tree_sink.attrib)
+        sink.slot = int(sink.slot) 
         sink.setExtends(self._parseAll(tree_sink,'extend'))
         return sink
 
     def parseSource(self,tree_source):
         source = Source(**tree_source.attrib)
+        source.slot = int(source.slot)
         source.setExtends(self._parseAll(tree_source,'extend'))
         return source
         
