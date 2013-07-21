@@ -90,9 +90,9 @@ class ControlFlowVisitor (object):
         for function in runorder:
             result = self.apply(function,result)
 
-        ret_method = self.final(method)
+        ret_method = self.final(method,result)
         self._methods[method] = ret_method
-        return self.final(result)
+        return ret_method
 
     def setup(self, method):
         pass 

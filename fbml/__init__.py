@@ -11,14 +11,14 @@ class MallformedFlowError (Exception) : pass
 import logging
 log = logging.getLogger('fbml')
 
-def Setup():
+def setup():
     from .util import visitors
     global DataFlowVisitor;
     global ControlFlowVisitor
     ControlFlowVisitor = visitors.ControlFlowVisitor
     DataFlowVisitor = visitors.DataFlowVisitor
 
-def getExtensions(*args):
+def get_extensions(*args):
     """
     Returns some of the std extensions, form the names given
     in args
@@ -29,7 +29,7 @@ def getExtensions(*args):
     args.extend(['Sources','Sinks'])
     return XMLExtensionFormats(extensions[a]().getDictTuble() for a in args)
 
-def importModule(modulename,extension=None,paths=None):
+def import_module(modulename,extension=None,paths=None):
     """
     This method imports a fmbl module. It uses the environemnt
     path $FBMLPATH to dertermine where to find the module.
@@ -49,11 +49,11 @@ def importModule(modulename,extension=None,paths=None):
     from . import core 
     from .parsers import xmlformat
     builder = core.Builder(paths,xmlformat.XMLParser(extension))
-    return builder.getModule(modulename)
+    return builder.get_module(modulename)
 
 
-def saveModule(module,filelike,extensions):
+def save_module(module,filelike,extensions):
     from .parsers import xmlformat
     return xmlformat.XMLWriter(extensions).write(module,filelike)
     
-Setup()
+setup()

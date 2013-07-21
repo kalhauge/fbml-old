@@ -109,17 +109,17 @@ class Module (object):
     def setExtensions(self,ext):
         self._extensions = set(ext)
 
-    def getId(self,name):
-        return self.getName() + "." + name
+    def get_id(self,name):
+        return self.get_name() + "." + name
 
-    def getName(self):
-        return self._package.getId(self._name)
+    def get_name(self):
+        return self._package.get_id(self._name)
 
     def __str__(self):
-        return self.getName()
+        return self.get_name()
 
     def __repr__(self):
-        return "<Module at {}>".format(self.getName())
+        return "<Module at {}>".format(self.get_name())
 
 
 class Package (object):
@@ -130,18 +130,18 @@ class Package (object):
         self._name = name
         self._package = package
 
-    def getName(self):
-        return self._package.getId(self._name)
+    def get_name(self):
+        return self._package.get_id(self._name)
 
-    def getId(self,name):
-        return self.getName() + "." + name
+    def get_id(self,name):
+        return self.get_name() + "." + name
 
-    def getPackage(self,name):
+    def get_package(self,name):
         if not name in self._subpackages:
             self._subpackages[name] = Package(name,self)
         return self._subpackages[name]
 
-    def getModule(self,name):
+    def get_module(self,name):
         if not name in self._modules:
             self._modules[name] = Module(name,self)
         return self._modules[name]
@@ -155,10 +155,10 @@ class RootPackage (Package):
         self._modules = {}
         self._subpackages = {}
     
-    def getName(self):
+    def get_name(self):
         return "(root)" 
 
-    def getId(self,name):
+    def get_id(self,name):
         return name
 
 
@@ -224,7 +224,10 @@ class Method (ModelObject):
         """
         :returns: the id of the method
         """
-        return self.getModule().getId(self.getInternalId())
+        return self.getModule().get_id(self.getInternalId())
+
+    def req(self,name): return self.getRequirement(name)
+    def ens(self,name): return self.getEnsurance(name)
     
     def getRequirements(self):
         """
@@ -513,7 +516,7 @@ class Source (ExtendableModelObject):
         return self._function
 
     def __repr__(self):
-        return '<source sink={} extend={}> '.format(self._sink,self.getExtensions());
+        return '<source sink={} extend={}> '.format(self._sink,[(n,e.getData()) for n,e in self.getExtensions().items()]);
 
     def depth(self,helper):
         if not self in helper:

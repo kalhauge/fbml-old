@@ -25,10 +25,10 @@ def main():
 
     args = parser.parse_args();
 
-    ext = fbml.getExtensions('MethodName');                
+    ext = fbml.get_extensions('MethodName');                
     modulename, methodname = args.methodid.rsplit('.',1)
 
-    module = fbml.importModule(modulename,ext);
+    module = fbml.import_module(modulename,ext);
     method = module.getMethod(methodname);
     sys.stdout.write("digraph {\n")
     sys.stdout.write( "  node [shape=record,style=rounded,height=0.1];\n")
@@ -58,7 +58,7 @@ class DotVisitor (fbml.ControlFlowVisitor):
             dotlines.append('IN_{} [label="{}"];'.format( sink.getId(), sink.getId()))
         return dotlines 
 
-    def final(self,dotlines): 
+    def final(self,method,dotlines): 
         return dotlines
 
     def apply(self,function,dotlines):

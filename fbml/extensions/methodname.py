@@ -19,6 +19,9 @@ class has_method_name (matchers.Matcher):
         description.append('has method name of ')
         description.append(self._method_name)
 
+def getMethodName(function):
+    return function['MethodName']
+
 
 class MethodNameExtension (Extension):
     XML_FORMAT = MethodNameFormat()

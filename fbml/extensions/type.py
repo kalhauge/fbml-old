@@ -6,6 +6,10 @@ from ..parsers import xmlformat
 
 import xml.etree.ElementTree as ET
 
+
+def getSourceTypes(function):
+    return [s['Type'] for s in function.getSources()]
+
 class TypeFormat (xmlformat.XMLExtensionFormat):
     def __init__(self): 
         self.setName('Type')
@@ -42,7 +46,7 @@ def could_be(t,method,i):
 class has_types (matchers.Matcher):
 
     def __init__(self,source_types):
-        self.types = source_types
+        self.types = list(source_types)
 
     def _matches(self,method):
         could_be_types = [could_be(t,method,i) for i,t in self.types]

@@ -11,9 +11,9 @@ from .util import exceptions
 import os
 
 def build(modulename,env):
-    return env.getModule(modulename) 
+    return env.get_module(modulename) 
 
-def readPath(modulename):
+def read_path(modulename):
     """
     Reads a modulename, and returns a list of module names
     :param modulename: a . seperated list of the module path
@@ -26,20 +26,20 @@ class Builder (object):
     def __init__(self,paths,parser):
         self._parser = parser
         self._paths = paths
-        self._packageEnvironment = PackageEnvironment()
-        self._buildModules = set()
+        self.package_environment = PackageEnvironment()
+        self._build_modules = set()
 
-    def getModule(self,modulename):
-        mod = self.getPackageEnvironment().getModuleFromName(modulename)
-        if not mod in self._buildModules:
-            self.buildModule(mod)
+    def get_module(self,modulename):
+        mod = self.package_environment.get_module_from_name(modulename)
+        if not mod in self._build_modules:
+            self.build_module(mod)
         return mod
 
-    def parseModule(self,module):
+    def parse_module(self,module):
         pars = None
         for path in self._paths:
             try:
-                filename = os.path.join(path, self.getFilename(module))
+                filename = os.path.join(path, self.get_filename(module))
                 with open(filename) as moduleFile:
                     pars = self._parser.parse(moduleFile) 
                     break
@@ -51,94 +51,89 @@ class Builder (object):
                 self._paths))
         return pars
 
-    def buildModule(self,module):
-        pars = self.parseModule(module)
-        module.setImports(self.getModule(imp) for imp in pars.imports)
+    def build_module(self,module):
+        pars = self.parse_module(module)
+        module.setImports(self.get_module(imp) for imp in pars.imports)
         module.setExtensions(pars.extensions)
-        module.setMethods(self.buildMethods(pars))
+        module.setMethods(self.build_methods(pars))
 
-    def buildMethods(self,pars):
+    def build_methods(self,pars):
         methods = dict()
-        for pMethod in pars.methods:
-            method = model.Method(pMethod.id)
-            method.addRequirements(self.buildRequirements(pMethod.requirements))
-            method.addEnsurances(self.buildEnsurances(pMethod.ensurances))
+        for p_method in pars.methods:
+            method = model.Method(p_method.id)
+            method.addRequirements(self.build_requirements(p_method.requirements))
+            method.addEnsurances(self.build_ensurances(p_method.ensurances))
             methods[method.getInternalId()] = method
         
-        impls = [self.buildImpl(impl,methods) for impl in pars.impls]
+        impls = [self.build_impl(impl,methods) for impl in pars.impls]
         return methods.values()
         
-    def buildImpl(self,pImpl,methods):
+    def build_impl(self,p_impl,methods):
         from itertools import chain
-        impl = model.Impl(methods[pImpl.method_id])
-        sinks = chain.from_iterable((s for s in f.sinks) for f in pImpl.functions)
-        sinks = dict((sink.id,self.buildSink(sink)) for sink in sinks)
+        impl = model.Impl(methods[p_impl.method_id])
+        sinks = chain.from_iterable((s for s in f.sinks) for f in p_impl.functions)
+        sinks = dict((sink.id,self.build_sink(sink)) for sink in sinks)
         args = impl.getMethod().getRequirement('Sources').items()
         sinks.update((sid,model.Sink(sid,slot)) for slot,sid in args)
         impl.addSinks(sinks.values())
-        impl.addFunctions(self.buildFunction(f,sinks) for f in pImpl.functions)
+        impl.addFunctions(self.build_function(f,sinks) for f in p_impl.functions)
         return impl
 
-    def buildFunction(self,pFunc,sinks):
+    def build_function(self,pFunc,sinks):
         func = model.Function(pFunc.id)
         func.addSinks(sinks[sink.id] for sink in pFunc.sinks)
-        func.addSources(self.buildSource(source,sinks) for source in pFunc.sources)
-        func.setExtensions(self.buildExtensions(pFunc.extends))
+        func.addSources(self.build_source(source,sinks) for source in pFunc.sources)
+        func.setExtensions(self.build_extension(pFunc.extends))
         func.connect()
         return func
 
-    def buildRequirements(self,pReqs):
+    def build_requirements(self,pReqs):
         return (model.Require(req.name,req.data) for req in pReqs) 
 
-    def buildEnsurances(self,pEns):
+    def build_ensurances(self,pEns):
         return (model.Ensure(ens.name,ens.data) for ens in pEns)
 
-    def buildExtensions(self,pExt):
+    def build_extension(self,pExt):
         return (model.Extend(ens.name,ens.data) for ens in pExt)
 
-    def buildSink(self,sink):
+    def build_sink(self,sink):
         return model.Sink(sink.id,sink.slot).setExtensions(
-                self.buildExtensions(sink.extends))
+                self.build_extension(sink.extends))
 
-    def buildSource(self,source,sinks):
+    def build_source(self,source,sinks):
         return model.Source(sinks[source.sink_id],source.slot).setExtensions(
-                self.buildExtensions(source.extends))
+                self.build_extension(source.extends))
         
-    def getFilename(self,element):
-        return self.getPackageEnvironment().getFilename(element)
+    def get_filename(self,element):
+        return self.package_environment.get_filename(element)
 
-    def getPackageEnvironment(self):
-        return self._packageEnvironment
-
-    def addBuildModule(self,module):
-        self._buildModules.add(module)
+    def add_build_module(self,module):
+        self._build_modules.add(module)
         return self
 
 class PackageEnvironment(object):
    
     def __init__(self):
-        self._rootPackage = model.RootPackage() 
+        self.root_package = model.RootPackage() 
 
-    def getFilename(self,element):
-        return os.path.join(*element.getName().split('.')) + '.fl'
+    def get_filename(self,element):
+        return os.path.join(*element.get_name().split('.')) + '.fl'
         
-    def getModuleFromName(self,modulename):
-        return self.getModule(readPath(modulename))
+    def get_module_from_name(self,modulename):
+        return self.get_module(read_path(modulename))
     
-    def getModule(self,module_path):
-        return self.getPackage(module_path[:-1]).getModule(module_path[-1])
+    def get_module(self,module_path):
+        return self.get_package(module_path[:-1]).get_module(module_path[-1])
 
-    def getPackage(self,module_path):
+    def get_package(self,module_path):
         if len(module_path) == 0:
-            return self.getRootPackage()
+            return self.root_package
         else:
-            return self.getPackage(module_path[:-1]).getPackage(module_path[-1])
+            return self.get_package(module_path[:-1]).get_package(module_path[-1])
     
-    def getRootPackage(self):
-        return self._rootPackage
 
 
-def readPath(modulename):
+def read_path(modulename):
     """
     Reads a modulename, and returns a list of module names
     :param modulename: a . seperated list of the module path

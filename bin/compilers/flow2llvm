@@ -8,20 +8,17 @@ import logging
 log = logging.getLogger("flow2llvm")
 
 import fbml
-from fbml.extensions.llvm import LLVMMethodCreater
-from fbml.extensions.llvm import compileToLLVM
+from fbml.extensions.llvm import compile_to_llvm
 
 logging.basicConfig(level=logging.DEBUG)
 
 def main():
     args = parseArgs()
 
-    ext = fbml.getExtensions('MethodName','Type')
-    module = fbml.importModule(args.modulename,ext)
-    llvm_module = compileToLLVM(module)
+    ext = fbml.get_extensions('MethodName','Type')
+    module = fbml.import_module(args.modulename,ext)
+    llvm_module = compile_to_llvm(module)
     print(llvm_module)
-
-
 
 def parseArgs():
     parser = argparse.ArgumentParser()
