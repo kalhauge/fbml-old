@@ -14,12 +14,12 @@ class Extension (object):
     Should Implement the NAME and XML_FORMAT variable as least.
     """
 
-    def getName(self):
+    def name(self):
         return self.__class__.NAME
-    def getXMLFormatter(self):
+    def xml_formatter(self):
         return self.__class__.XML_FORMAT
 
-    def getDictTuble(self):
+    def dict_tuble(self):
         return (self.getName(),self)
 
 

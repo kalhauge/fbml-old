@@ -18,15 +18,15 @@ import re
 
 class XMLWriter (object):
 
-    def __init__(self,extendFormats):
-        self._extensions = extendFormats;
+    def __init__(self, extend_formats):
+        self.extend_formats= extend_formats;
 
     def write(self,module,filelike):
         e = ET.ElementTree()
         root = ET.Element('fbml',{'version':'0.0'})
-        self.writeImportsToTree(module.getImports(),root) 
-        self.writeExtensionsToTree(module.getExtensions(),root)
-        self.writeMethodsToTree(module.getMethods(),root)
+        self.write_imports_to_tree(module.imports,root) 
+        self.write_extensions_to_tree(module.ext.get_all(),root)
+        self.write_methods_to_tree(module.methods,root)
         e._setroot(root)
         s = io.StringIO()
         e.write(s,xml_declaration="1.0",encoding="unicode")
@@ -39,208 +39,200 @@ class XMLWriter (object):
             with open(filelike,'w') as f:
                 f.write(result)
 
-    def writeMethodsToTree(self,methods,root):
-        for method in methods: self.writeMethodToTree(method,root)
+    def write_methods_to_tree(self,methods,root):
+        for method in methods: self.write_method_to_tree(method,root)
 
-    def writeImportsToTree(self,imports,root):
-        for imp in imports: ET.SubElement(root,'import').text = imp.getName()
+    def write_imports_to_tree(self,imports,root):
+        for imp in imports: ET.SubElement(root,'import').text = repr(imp.label)
 
-    def writeExtensionsToTree(self,exts,root):
+    def write_extensions_to_tree(self,exts,root):
         for ext in exts: 
             ET.SubElement(root,'extension').text = ext 
 
-    def writeMethodToTree(self,method,root):
-        tree_method = ET.SubElement(root,'method',{'id':method.getInternalId()})
+    def write_method_to_tree(self,method,root):
+        tree_method = ET.SubElement(root,'method',{'id':method.label})
        
-        self.writeRequirementsToTree(method.getRequirements(),tree_method)
-        self.writeEnsurancesToTree(method.getEnsurances(),tree_method)
-        self.writeImplToTree(method.getImpl(),root)
+        self.write_requirements_to_tree(method.req.get_all(),tree_method)
+        self.write_ensurances_to_tree(method.ens.get_all(),tree_method)
+        try:   
+            self.write_impl_to_tree(method.impl,root)
+        except AttributeError as e:
+            log.debug("No impl found to %s",method)
 
-    def writeImplToTree(self,impl,root):
-        if isinstance(impl,model.NoneImpl): return
+    def write_impl_to_tree(self,impl,root):
+        tree_impl = ET.SubElement(root,'impl',
+                {'method_id':impl.get_method().get_internal_id()})
+        self.write_functions_to_tree(impl.get_functions(),tree_impl)
 
-        tree_impl = ET.SubElement(root,'impl',{'method_id':impl.getMethod().getInternalId()})
-        self.writeFunctionsToTree(impl.getFunctions(),tree_impl)
+    def write_functions_to_tree(self,funcs,root):
+        for func in funcs: self.write_function_to_tree(func,root)
 
-    def writeFunctionsToTree(self,funcs,root):
-        for func in funcs: self.writeFunctionToTree(func,root)
+    def write_function_to_tree(self,func,root):
+        tree_func = ET.SubElement(root,'function',{'id':func.get_id()})
+        self.write_extends_to_tree(func.get_extensions(),tree_func)
+        self.write_sources_to_tree(func.get_sources(),tree_func)
+        self.write_sinks_to_tree(func.get_sinks(),tree_func)
 
-    def writeFunctionToTree(self,func,root):
-        tree_func = ET.SubElement(root,'function',{'id':func.getId()})
-        self.writeExtendsToTree(func.getExtensions(),tree_func)
-        self.writeSourcesToTree(func.getSources(),tree_func)
-        self.writeSinksToTree(func.getSinks(),tree_func)
+    def write_sources_to_tree(self,sources,root):
+        for source in sources: self.write_source_to_tree(source,root)
 
-    def writeSourcesToTree(self,sources,root):
-        for source in sources: self.writeSourceToTree(source,root)
-
-    def writeSourceToTree(self,source,root):
+    def write_source_to_tree(self,source,root):
         elm = ET.SubElement(root,'source')
-        elm.set('sink_id',source.getSink().getId())
-        elm.set('slot',str(source.getSlot()))
-        self.writeExtendsToTree(source.getExtensions(),elm)
+        elm.set('sink_id',source.sink.sink_id)
+        elm.set('slot',str(source.location.slot))
+        self.write_extends_to_tree(source.ext.get_all(),elm)
 
-    def writeSinksToTree(self,sinks,root):
-        for sink in sinks: self.writeSinkToTree(sink,root)
+    def write_sinks_to_tree(self,sinks,root):
+        for sink in sinks: self.write_sink_to_tree(sink,root)
 
-    def writeSinkToTree(self,sink,root):
+    def write_sink_to_tree(self,sink,root):
         elm = ET.SubElement(root,'sink')
-        elm.set('id',sink.getId())
-        elm.set('slot',str(sink.getSlot()))
-        self.writeExtendsToTree(sink.getExtensions(),elm)
+        elm.set('id',sink.sink_id)
+        elm.set('slot',str(sink.location.slot))
+        self.write_extends_to_tree(sink.ext.get_all(),elm)
 
-    def writeRequirementsToTree(self,reqs,root):
-        for req in reqs.values(): self._extensions.writeRequireToTree(req,root)
+    def write_requirements_to_tree(self,reqs,root):
+        for req in reqs.values(): self.extend_formats.write_require_to_tree(req,root)
 
-    def writeEnsurancesToTree(self,ens,root):
-        for en in ens.values(): self._extensions.writeEnsureToTree(en,root)
+    def write_ensurances_to_tree(self,ens,root):
+        for en in ens.values(): self.extend_formats.write_ensure_to_tree(en,root)
 
-    def writeExtendsToTree(self,exts,root):
-        for ext in exts.values(): self._extensions.writeToTree(ext,root)
+    def write_extends_to_tree(self,exts,root):
+        for ext in exts.values(): self.extend_formats.write_to_tree(ext,root)
 
 
 class XMLParser (object):
 
-    def __init__(self,extendFormats):
-        self._extensions = extendFormats
-
-    def getExtendFormats(self):
-        return self._extensions
+    def __init__(self,extend_formats):
+        self.extend_formats= extend_formats
 
     def parse(self,filelike):
-        return self.parseModule(ET.parse(filelike).getroot())
+        return self.parse_module(ET.parse(filelike).getroot())
 
-    def parseModule(self,tree_module):
+    def parse_module(self,tree_module):
         module = Module(**tree_module.attrib)
-        module.setImports(self._parseAll(tree_module,'import'))
-        module.setExtensions(self._parseAll(tree_module,'extension'))
-        module.setMethods(self._parseAll(tree_module,'method'))
-        module.setImpls(self._parseAll(tree_module,'impl'))
+        module.imports = (self._parse_all(tree_module,'import'))
+        module.extensions = (self._parse_all(tree_module,'extension'))
+        module.methods = (self._parse_all(tree_module,'method'))
+        module.impls = (self._parse_all(tree_module,'impl'))
         return module
 
-    def parseMethod(self,tree_method):
+    def parse_method(self,tree_method):
         method = Method(**tree_method.attrib)
-        method.setRequirements(self._parseAll(tree_method,'require'))
-        method.setEnsurances(self._parseAll(tree_method,'ensure')) 
+        method.set_requirements(self._parse_all(tree_method,'require'))
+        method.set_ensurances(self._parse_all(tree_method,'ensure')) 
         return method
 
-    def parseImpl(self,tree_impl):
+    def parse_impl(self,tree_impl):
         impl = Impl(**tree_impl.attrib)
-        impl.setFunctions(self._parseAll(tree_impl,'function'))
+        impl.set_functions(self._parse_all(tree_impl,'function'))
         return impl
 
-    def parseFunction(self,tree_func):
+    def parse_function(self,tree_func):
         func = Function(**tree_func.attrib)
-        func.setExtends(self._parseAll(tree_func,'extend'))
-        func.setSinks(self._parseAll(tree_func,'sink'))
-        func.setSources(self._parseAll(tree_func,'source'))
+        func.extends = (self._parse_all(tree_func,'extend'))
+        func.set_sinks(self._parse_all(tree_func,'sink'))
+        func.set_sources(self._parse_all(tree_func,'source'))
         return func
 
-    def parseRequire(self,tree_require):
+    def parse_require(self,tree_require):
         require = Require(**tree_require.attrib);
-        self._extensions.parseRequire(require,tree_require)
+        self.extend_formats.parse_require(require,tree_require)
         return require
 
-    def parseEnsure(self,tree_ensure): 
+    def parse_ensure(self,tree_ensure): 
         ensure = Ensure(**tree_ensure.attrib)
-        self._extensions.parseEnsure(ensure,tree_ensure)
+        self.extend_formats.parse_ensure(ensure,tree_ensure)
         return ensure
 
-    def parseSink(self,tree_sink):
+    def parse_sink(self,tree_sink):
         sink = Sink(**tree_sink.attrib)
         sink.slot = int(sink.slot) 
-        sink.setExtends(self._parseAll(tree_sink,'extend'))
+        sink.extends = (self._parse_all(tree_sink,'extend'))
         return sink
 
-    def parseSource(self,tree_source):
+    def parse_source(self,tree_source):
         source = Source(**tree_source.attrib)
         source.slot = int(source.slot)
-        source.setExtends(self._parseAll(tree_source,'extend'))
+        source.extends = (self._parse_all(tree_source,'extend'))
         return source
         
-    def parseExtend(self,tree_extend):
+    def parse_extend(self,tree_extend):
         extend = Extend(**tree_extend.attrib)
-        self._extensions.parse(extend,tree_extend)
+        self.extend_formats.parse(extend,tree_extend)
         return extend
 
-    def parseImport(self,tree_import):
+    def parse_import(self,tree_import):
         return tree_import.text
 
-    def parseExtension(self,tree_ext):
+    def parse_extension(self,tree_ext):
         return tree_ext.text
 
-    def _parseAll(self,tree,name):
-        function = getattr(self,"parse" + name.capitalize())
+    def _parse_all(self,tree,name):
+        function = getattr(self,"parse_" + name)
         return (function(elm) for elm in tree.findall(name))
 
 
 class XMLExtensionFormats (object):
 
-    def __init__(self,extendFormats={}):
-        self._extensions = dict(extendFormats)
+    def __init__(self,extend_formats={}):
+        self.extend_formats= dict(extend_formats)
 
-    def addExtensionFormat(self,eformat):
-        self.addExtensionFormat({eformat.getName():eformat})
+    def add_extension_format(self,eformat):
+        self.add_extension_format({eformat.get_name():eformat})
 
-    def addExtensionFormats(self,formats):
-        self._extensions.update(formats)
+    def add_extension_formats(self,formats):
+        self.extend_formats.update(formats)
 
-    def getExtendFormat(self,name):
-        try: return self._extensions[name].XML_FORMAT
+    def get_extend_format(self,name):
+        try: return self.extend_formats[name].XML_FORMAT
         except KeyError:
             log.warning(
                     'Found name %s, no known extension parser', 
                     name)
-            return XMLExtensionFormat().setName(name)
+            return XMLExtensionFormat().set_name(name)
 
     def parse(self,extend,tree_extend): 
-        extend.data = self.getExtendFormat(extend.name).parse(tree_extend)
+        extend.data = self.get_extend_format(extend.name).parse(tree_extend)
 
-    def parseRequire(self,require,tree_require):
-        require.data = self.getExtendFormat(require.name).parseRequire(tree_require)
+    def parse_require(self,require,tree_require):
+        require.data = self.get_extend_format(require.name).parse_require(tree_require)
 
-    def parseEnsure(self,ensure,tree_ensure):
-        ensure.data = self.getExtendFormat(ensure.name).parseEnsure(tree_ensure)
+    def parse_ensure(self,ensure,tree_ensure):
+        ensure.data = self.get_extend_format(ensure.name).parse_ensure(tree_ensure)
 
-    def writeToTree(self,extend,root):
-        tree = ET.SubElement(root,'extend',{'name':extend.getName()})
-        self.getExtendFormat(extend.getName())\
-                .writeToTree(extend.getData(),tree);
+    def write_to_tree(self,extend,root):
+        tree = ET.SubElement(root,'extend',{'name':extend.get_name()})
+        self.get_extend_format(extend.get_name())\
+                .write_to_tree(extend.get_data(),tree);
     
-    def writeRequireToTree(self,extend,root):
-        tree = ET.SubElement(root,'require',{'name':extend.getName()})
-        self.getExtendFormat(extend.getName())\
-                .writeRequireToTree(extend.getData(),tree);
+    def write_require_to_tree(self,extend,root):
+        tree = ET.SubElement(root,'require',{'name':extend.get_name()})
+        self.get_extend_format(extend.get_name())\
+                .write_require_to_tree(extend.get_data(),tree);
     
-    def writeEnsureToTree(self,extend,root):
-        tree = ET.SubElement(root,'ensure',{'name':extend.getName()})
-        self.getExtendFormat(extend.getName())\
-                .writeEnsureToTree(extend.getData(),tree);
+    def write_ensure_to_tree(self,extend,root):
+        tree = ET.SubElement(root,'ensure',{'name':extend.get_name()})
+        self.get_extend_format(extend.get_name())\
+                .write_ensure_to_tree(extend.get_data(),tree);
 
 class XMLExtensionFormat (object):
-
-    def setName(self,name):
-        self._name = name
-        return self
-
-    def getName(self):
-        return self._name
     
     def parse(self,tree):
-        return tree.text
+        return tree 
 
-    def parseRequire(self,tree):
-        return tree.text
+    def parse_require(self,tree):
+        return tree
 
-    def parseEnsure(self,tree):
-        return tree.text
+    def parse_ensure(self,tree):
+        return tree
 
-    def writeToTree(self,data,tree):
+    def write_to_tree(self,data,tree):
         tree.text = str(data)
 
-    def writeEnsureToTree(self,data,tree):
+    def write_ensure_to_tree(self,data,tree):
         tree.text = str(data)
 
-    def writeRequireToTree(self,data,tree):
+    def write_require_to_tree(self,data,tree):
         tree.text = str(data)
 

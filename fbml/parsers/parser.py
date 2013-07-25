@@ -3,6 +3,27 @@
 
 """
 from ..util import exceptions
+
+def str_format(obj, indent):
+    from io import StringIO
+    si = StringIO()
+    try:
+        values = obj.values()
+        si.write(indent + '+ @' + obj.__class__.__name__ + '\n')
+        for name, value in values.items():
+            si.write(indent + '| + ' + name + ":\n")
+            si.write(str_format(value,indent + '| |'))
+        si.write(indent + '+-+' + "\n")
+        si.write(indent + '+' + "\n")
+        return si.getvalue()
+    except AttributeError:
+        if isinstance(obj,list):
+            for x in obj:
+                si.write(str_format(x,indent + ' ' ))
+            return si.getvalue()
+            si.write(indent + '+' + "\n")
+        return indent + '   ' + repr(obj) + '\n'
+
 class ParseObject(object):
     
     def __init__(self,**kargs):
@@ -11,82 +32,80 @@ class ParseObject(object):
         self.check()
 
     def check(self):
-        attributes = self.requriedAttributes()
+        attributes = self.requried_attributes()
         for attr in attributes:
             if not hasattr(self,attr):
                 raise exceptions.MallformedFlowError(
                     "{} needs the attribute {}".format(self,attr)
                     )
 
-    def __repr__(self):
-        return "<{} attr: {}>".format(self.__class__.__name__,vars(self))
+    def values(self):
+        vals = dict((name.lstrip('_'),value) for name, value in vars(self).items())
+        return vals
 
+    def __repr__(self):
+        return str_format(self,'')
+
+def public_list(name):
+    def setter(self, seq):
+        setattr(self,name,list(seq))
+        return self
+    return property(lambda self: getattr(self,name),setter)
 
 class ExtendableParseObject (ParseObject):
-
-    def setExtends(self,seq):
-        self.extends = list(seq)
-
+    extends = public_list('_extends')
 
 class Module(ParseObject):
 
-    def requriedAttributes(self): return ['version']
+    def requried_attributes(self): return ['version']
 
-    def setImports(self,seq):
-        self.imports = list(seq) 
-
-    def setExtensions(self,seq):
-        self.extensions = list(seq)
-
-    def setMethods(self,seq):
-        self.methods = list(seq)
-
-    def setImpls(self,seq):
-        self.impls = list(seq)
+    imports    = public_list('_imports')
+    extensions = public_list('_extensions') 
+    methods    = public_list('_methods')
+    impls      = public_list('_impls')
 
 class Method(ParseObject): 
 
-    def requriedAttributes(self): return ['id']
+    def requried_attributes(self): return ['id']
 
-    def setRequirements(self,seq):
+    def set_requirements(self,seq):
         self.requirements = list(seq)
 
-    def setEnsurances(self,seq):
+    def set_ensurances(self,seq):
         self.ensurances = list(seq)
 
 
 class Impl(ParseObject):
 
-    def requriedAttributes(self): return ['method_id']
+    def requried_attributes(self): return ['method_id']
 
-    def setFunctions(self,seq):
+    def set_functions(self,seq):
         self.functions = list(seq)
 
 
 class Function(ExtendableParseObject):
    
-    def requriedAttributes(self): return ['id']
+    def requried_attributes(self): return ['id']
     
-    def setSinks(self,seq):
+    def set_sinks(self,seq):
         self.sinks = list(seq)
 
-    def setSources(self,seq):
+    def set_sources(self,seq):
         self.sources = list(seq)
 
-
 class Sink(ExtendableParseObject):
-    def requriedAttributes(self): return ['id','slot']
+    def requried_attributes(self): return ['id','slot']
 
 class Source(ExtendableParseObject): 
-    def requriedAttributes(self): return ['sink_id','slot']
+    def requried_attributes(self): return ['sink_id','slot']
 
 class Require(ParseObject):
-    def requriedAttributes(self): return ['name']
+    def requried_attributes(self): return ['name']
 
 class Ensure(ParseObject):
-    def requriedAttributes(self): return ['name']
+    def requried_attributes(self): return ['name']
 
 class Extend(ParseObject):
-    def requriedAttributes(self): return ['name']
+    def requried_attributes(self): return ['name']
 
 
