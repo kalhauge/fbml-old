@@ -24,10 +24,12 @@ from .util import readonly
 
 
 def make_with(namespace):
+    dictname = namespace + 's'
     def make_type(self, name, factory):
-        return self.make(namespace + str(name),factory)
+        result = self.make(str(name),factory)
+        getattr(self, dictname)[name] = result 
+        return result
     return make_type
-
 
 class ExtensionManager (object):
 
@@ -38,7 +40,6 @@ class ExtensionManager (object):
         self.__dict__['_extensions'][name] = extend
 
     def __getattr__(self, name):
-        print(self.__class__.__name__, self.__dict__['_extensions'])
         return self.__dict__['_extensions'][name]
 
     def get_all(self):
@@ -70,32 +71,42 @@ class Method (Labelable, ModelObject):
         self._requirements = ExtensionManager()
         self._ensurances = ExtensionManager()
 
-    impl  = property(lambda self: self.children['impl'])
+    impl  = property(lambda self: self.find('impl'))
     req   = readonly('_requirements')
     ens   = readonly('_ensurances')
 
-    make_impl = lambda s,f :make_with('impl')(s,'',f)
+    def internal_sinks(self):
+        return [self.impl.sinks[name] for name in self.ens.sinks]
+
+    def make_impl(self, factory):
+        self.make('impl',factory)
+        return self.impl
 
 class Impl (Labelable, ModelObject):
 
     def __init__(self, label):
         super(Impl,self).__init__(label)
+        self.sinks = dict()
+        self.functions = dict()
 
-    make_sink = make_with('sink_') 
-    make_function = make_with('function_')
+    make_sink = make_with('sink') 
+    make_function = make_with('function')
 
-    def get_sink(self,name):
-        return self.children['sink_' + name]
+    method = property(lambda self: self.label.parrent) 
 
 class Function (Labelable, ExtendableModelObject):
 
     def __init__(self, label):
         super(Function, self).__init__(label)
         ExtendableModelObject.__init__(self)
+        self.sinks = dict()
+        self.sources = dict() 
 
     def make_sink(self, slot, name, factory):
         def sink_factory(label):
-            return self.make(slot, partial(factory,label))
+            res = self.make('sink_'+str(slot), partial(factory,label))
+            self.sinks[name] = res;
+            return res
         self.impl.make_sink(name,sink_factory)
     
     make_source = make_with('source')
@@ -104,8 +115,8 @@ class Function (Labelable, ExtendableModelObject):
 
     def depth(self,helper):
         if not self in helper:
-            if len(self.sources) == 0: depth = 0;
-            else: depth = max(src.depth(helper) for src in self.sources) +1
+            if not self.sources: depth = 0;
+            else: depth = max(src.depth(helper) for src in self.sources.values()) +1
             helper[self] = depth;
         return helper[self]
 
@@ -125,14 +136,14 @@ class Sink (ExtendableModelObject):
     target = readonly('_target')
     users = readonly('_users')
 
+    function = property(lambda self: self.target.parrent)
+
     def __repr__(self):
         return '<sink {s.label} at {s.target}>'.format(s=self)
 
     def depth(self,helper):
         if not self in helper:
-            if self.function is None: depth = 0;
-            else: depth = self.function.depth(helper) + 1;
-            helper[self] = depth;
+            helper[self] = self.function.depth(helper) + 1
         return helper[self]
 
 class Source (ExtendableModelObject):
@@ -145,6 +156,9 @@ class Source (ExtendableModelObject):
 
     sink = readonly('_sink')
     target = readonly('_target')
+
+    function = property(lambda self: self.target.parrent)
+
     def __repr__(self):
         return '<source {s.sink} at {s.target}>'.format(s=self)
 

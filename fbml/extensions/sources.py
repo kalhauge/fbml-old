@@ -38,7 +38,6 @@ class has_sources_length (matchers.Matcher):
         description.append("has {} number of sources".format(self._length))
 
 
-
 class SourcesExtension(Extension):
     NAME = "sources"
     XML_FORMAT = SourcesFormat()

@@ -1,5 +1,5 @@
 """
-.. module:: fbml.model
+.. module:: fbml.structure
 .. moduleauthor:: Christian Gram Kalhauge <s093273@student.dtu.dk>
 
 =====
@@ -9,6 +9,9 @@ Structure
 """
 
 import os
+
+import logging
+log = logging.getLogger('fbml.structure')
 
 from .util import readonly
 
@@ -28,16 +31,16 @@ class Label (object):
     parrent = readonly('_parrent') 
 
     def __repr__(self):
-        return '.'.join(self.get_name_list()) 
+        return '.'.join(self.to_name_list()) 
 
-    def get_name_list(self):
-        return self.parrent.get_name_list() + [self.name]
+    def to_name_list(self):
+        return self.parrent.to_name_list() + [self.name]
 
     def get(self):
         return self.parrent.children[self.name]
 
     @staticmethod
-    def from_string(label_string, root_package):
+    def from_string(label_string, root_package, factory):
         """ 
         Creates a string from an label string and the root package
 
@@ -47,8 +50,9 @@ class Label (object):
             and position of the following packages
         """
         name_list = label_string.split('.')
-        return root_package.get_label_from_name_list(name_list)
+        return root_package.find_or_make(name_list,factory).label
 
+            
 class Labelable (object):
 
     def __init__(self,label):
@@ -58,21 +62,29 @@ class Labelable (object):
     label = readonly('_label')
     children = property(lambda self: dict(self._children))
 
-    def get_label_from_name(self, name):
+    def find_or_make(self, name_list, factory):
         """
-        Returns the label, given a name, if the name is know as one of 
-        the children. Else is rasies a KeyError
-        :param name: The name of the label to retrieve
-        :raises: KeyError if name does not exist in children
+        Finds or make a label from a list using a
+        factory
         """
-        if not name in self.children: 
-            raise KeyError(repr(self) + ': No ' + name + ' in children')
-        return Label(name, self)
+        if not name_list: return self.label
+        try:
+            subpackage = self.find(name_list[0])
+        except KeyError:
+            log.debug("Subpackage {name} not found, try to create",
+                    name=name_list[0])
+            subpackage = self.make(name_list[0],factory)
+            
+        return subpackage.find_or_make(name_list[1:],factory)
 
-    def get(self, name):
+    def find(self, name):
+        """
+        Returns a local attribute from a name.
+        :param name: the name of the attribute, that is seeked
+        """
         return self.children[name]
 
-    def get_label_from_name_list(self, name_list):
+    def find_from_name_list(self, name_list):
         """ Returns the label, by searching through the structure tree
         recursively
 
@@ -80,13 +92,14 @@ class Labelable (object):
             subtree
         :raises: KeyError if problem occurs with the language
         """
-        if not name_list: return self.label
-        subpackage = self.children[name_list[0]]
-        return subpackage.get_label_from_name_list(name_list[1:])
+        if not name_list: 
+            return self
+        else: 
+            return self.find(name_list[0]).find_from_name_list(name_list[1:]) 
 
-    def get_name_list(self):
+    def to_name_list(self):
         """ returns the name list of the package """
-        return self._label.get_name_list()
+        return self._label.to_name_list()
 
     def make(self, name, child_factory):
         """
@@ -97,9 +110,9 @@ class Labelable (object):
         """
         child_label = Label(name,self)
         if name in self._children:
-            raise KeyError(name + " already in children")
+            raise KeyError(name + " already in children: " + str(child_label.get()))
         self._children[child_label.name] = child_factory(child_label)
-        return self._children[child_label.name]
+        return child_label.get() 
 
 
          
@@ -133,27 +146,6 @@ class Package (Labelable):
         posible_names += [path + '.fl' for path in posible_names] 
         return filter(lambda fname: os.path.exists(fname), posible_names)
 
-    def make_from_name_list(self,name_list,factory): 
-        """
-        Returns a new package the data which is created, from the
-        new data. The functions raises a KeyError if the model already
-        exists.
-       
-        :param name_list: The list of names, that the label should be
-            created from
-        :param factory: A function that given a list of valid paths 
-            returns a function able to create a package or module
-            using a label.
-        """
-        if not name_list: return self.label
-        paths = list(self.get_paths_from_name(name_list[0]))
-        if not paths: 
-            raise IOError("No posible files/folders of name {name} in {paths}".format( 
-                    name = name_list[0],
-                    paths = self.paths))
-        child = self.make(name_list[0],factory(paths))
-        return child.make_from_name_list(name_list[1:],factory)
-
     def __repr__(self):
         return repr(self.label)
 
@@ -168,7 +160,7 @@ class RootPackage (Package):
         self._children = dict()
         self._paths = paths
 
-    def get_name_list(self):
+    def to_name_list(self):
         return []
 
     def __repr__(self):
@@ -189,4 +181,12 @@ class Module (Package):
     imports   = property(lambda self: self._imports)
 
     make_method = Labelable.make
+
+    def find_or_make(self, name_list, factory):
+        """
+        Since a module can not exist in a half build state
+        there is no need to make any thing.
+
+        """
+        return self.find_from_name_list(name_list);
 

@@ -1,48 +1,40 @@
 #!env python
 """
-Compiler : flow2dot 
+.. program:: fbml2dot
+.. codeauthor:: Christian Gram Kalhauge <kalhauge@cbs.dtu.dk>
 
-This is the simple flow to dot compiler wich takes modulename 
-and produces dot code.
 
-Need extensions:
-    MethodName
 """
-
-
-import argparse
-import sys
+import os
 import logging
-
-logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger('fbml2dot')
 
 import fbml
+import fbml.core
+from fbml.parsers.xmlformat import XMLParser
+from fbml.structure import Label
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('methodid',help='the fullpath id of the method');
+def main(args):
+    builder = fbml.get_builder(paths=[os.getcwd()],extensions=['method_name'])
 
-    args = parser.parse_args();
+    method = builder.label_from_string(args.methodid).get()
 
-    ext = fbml.get_extensions('MethodName');                
-    modulename, methodname = args.methodid.rsplit('.',1)
-
-    module = fbml.import_module(modulename,ext);
-    method = module.getMethod(methodname);
     sys.stdout.write("digraph {\n")
     sys.stdout.write( "  node [shape=record,style=rounded,height=0.1];\n")
     sys.stdout.write('  ' + '\n  '.join(DotVisitor().visit(method)) + "\n")
 
-    for sink in method.getSinks():
+    for sink in method.internal_sinks():
         sys.stdout.write('  OUT_{} [label = "{}"];\n'.format(
-                sink.getId(),
-                sink.getId()))
-        sys.stdout.write('  "{}":sink_{} -> "OUT_{}";\n'.format(
-                sink.getFunction().getId(),
-                sink.getId(),
-                sink.getId()))
+                id_(sink),id_(sink)))
+        sys.stdout.write('  "{}":{} -> "OUT_{}";\n'.format(
+                id_(sink.function),
+                id_(sink),id_(sink)))
     sys.stdout.write("}\n")
+       
+    return 0
+
+def id_(obj): return obj.label.name
 
 class DotVisitor (fbml.ControlFlowVisitor):
 
@@ -54,47 +46,53 @@ class DotVisitor (fbml.ControlFlowVisitor):
         Setup initializes the list of lines which everythis is appended to
         """
         dotlines = [] 
-        for sink in method.getSources():
-            dotlines.append('IN_{} [label="{}"];'.format( sink.getId(), sink.getId()))
         return dotlines 
 
     def final(self,method,dotlines): 
         return dotlines
 
     def apply(self,function,dotlines):
-        in_str = "|".join(["<source_{}>".format(s.getSink().getId()) 
-                        for s in function.getSources()]);
-        out_str = "|".join(["<sink_{}>".format(s.getId()) 
-                        for s in function.getSinks()]);
+        
+        in_str = "|".join(["<{}>".format(id_(s.sink)) 
+                        for s in function.sources.values()]);
+        out_str = "|".join(["<{}>".format(id_(s))
+                        for s in function.sinks.values()]);
         function_str= '{} [label="{{{}}}"];'.format(
-            function.getId(),
+            function.label.name,
             '{} {} {}'.format(
                '{{{}}} |'.format(in_str) if not in_str is '' else '',
-               function['MethodName'],
+               function.ext.method_name,
 
                '| {{{}}}'.format(out_str) if not out_str is '' else '',
                )
             )
         
         connections = []
-        for source in function.getSources():
-            sink = source.getSink();
-            if not sink.getFunction() is None:
-                con = '"{}":sink_{} -> "{}":source_{};'.format(
-                        sink.getFunction().getId(),
-                        sink.getId(),
-                        function.getId(),
-                        sink.getId())
-            else:
-                con = '"IN_{}" -> "{}":source_{};'.format(
-                        sink.getId(),
-                        function.getId(),
-                        sink.getId())
-
+        for source in function.sources.values():
+            sink = source.sink;
+            con = '"{}":{} -> "{}":{};'.format(
+                    id_(sink.function),
+                    id_(sink),
+                    id_(function),
+                    id_(sink)
+                )
             connections.append(con);
         dotlines.append(function_str)
         dotlines.extend(connections)
 
         return dotlines
         
-if __name__ == "__main__" : main()
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('methodid',help='the fullpath id of the method');
+
+    args = parser.parse_args()
+    # Post processing of args
+    return args
+
+if __name__ == '__main__':
+    import sys
+    logging.basicConfig(level=logging.INFO)
+    sys.exit(main(parse_args()))
+

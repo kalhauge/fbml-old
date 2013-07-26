@@ -28,10 +28,12 @@ class Extension (object):
 from . import type, methodname, sources, sinks, llvm
 
 
-extensions = {
-        "Type"       : type.TypeExtension,
-        "MethodName" : methodname.MethodNameExtension,
-        "Sources"    : sources.SourcesExtension,
-        "Sinks"      : sinks.SinksExtension,
-        "LLVM"       : llvm.LLVMExtension,
-        }
+extensions = [
+        type.TypeExtension(), 
+        methodname.MethodNameExtension(),
+        sources.SourcesExtension(),
+        sinks.SinksExtension(),
+        llvm.LLVMExtension(),
+        ] 
+
+named_extensions = dict(ext.tuble() for ext in extensions)

@@ -2,8 +2,6 @@
 <fbml version="0.0">
     <import>stdlib</import>
     <extension>method_name</extension>
-    <extension>Constant</extension>
-    <extension>Value</extension>
     <extension>type</extension>
     <method id="m1">
         <require name="method_name">Main</require>
@@ -89,7 +87,7 @@
             <type slot="3">Integer</type>
             <type slot="4">Integer</type>
         </require>
-        <ensure name="Sinks">
+        <ensure name="sinks">
             <sink id="f" slot="0"/>
         </ensure>
     </method>

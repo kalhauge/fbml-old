@@ -1,25 +1,23 @@
 
-def calculateReachableFunctions(sinks):
+def calculate_reachable_functions(sinks):
     from collections import deque 
     sources = []
     q = deque(sinks);
-    f_set = set()        
+    f_set = set()
     while q:
         sink = q.popleft();
-        function = sink.getFunction();
-        if not function is None:
-            if not function in f_set:
-                # Sink depend on a function not allready in set
-                f_set.add(function);
-                q.extend(source.getSink() 
-                        for source in function.getSources());
+        if not sink.function in f_set:
+            # Sink depend on a function not allready in set
+            f_set.add(sink.function);
+            q.extend(source.sink 
+                    for source in sink.function.sources.values());
         else: sources.append(sink);
 
     return f_set
 
-def calculateRunorder(impl):
-    sinks = impl.getMethod().getSinks()
-    f_set = calculateReachableFunctions(sinks)
+def calculate_runorder(impl):
+    sinks = impl.method.internal_sinks()
+    f_set = calculate_reachable_functions(sinks)
     helper = dict()
     return sorted(f_set,key=lambda a : a.depth(helper));        
 
@@ -32,8 +30,8 @@ class DataFlowVisitor (object):
     def visit(self,method):
         if method in self._methods:
             return self._methods[method]
-        impl = method.getImpl()
-        runorder = calculateRunorder(impl)
+        impl = method.impl
+        runorder = calculate_runorder(impl)
         initial_sink_results = self.setup(method);
         results = dict((s.getId(),initial_sink_results[s.getSlot()])
                         for s in method.getSources())
@@ -84,8 +82,7 @@ class ControlFlowVisitor (object):
     def visit(self,method):
         if method in self._methods:
             return method
-        impl = method.getImpl()
-        runorder = calculateRunorder(impl)
+        runorder = calculate_runorder(method.impl)
         result = self.setup(method)
         for function in runorder:
             result = self.apply(function,result)

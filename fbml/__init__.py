@@ -18,16 +18,39 @@ def setup():
     ControlFlowVisitor = visitors.ControlFlowVisitor
     DataFlowVisitor = visitors.DataFlowVisitor
 
-def get_extensions(*args):
+def get_extensions(names):
     """
     Returns some of the std extensions, form the names given
     in args
     """
-    from .extensions import extensions 
+    from .extensions import named_extensions 
     from .parsers.xmlformat import XMLExtensionFormats
-    args = list(args)
-    args.extend(['Sources','Sinks'])
-    return XMLExtensionFormats(extensions[a]().tuble() for a in args)
+    return XMLExtensionFormats(named_extensions[a].tuble() for a in names)
+
+def root_from_environment(paths=None):
+    import os
+    if not paths: paths = []
+    try: paths += os.environ['FBMLPATH'].split(':')
+    except KeyError: log.warning('FBMLPATH not set')
+    return structure.RootPackage(paths)
+
+def get_builder(
+        paths=None,
+        root_package=None,
+        extensions=None,
+        parser=None):
+    if not root_package: 
+        root_package = root_from_environment(paths) 
+    if not parser:
+        extensions = list(extensions) if extensions else list()
+        from .parsers import xmlformat
+        parser = xmlformat.XMLParser(
+                get_extensions(extensions + ['sources','sinks']))
+
+    from . import core
+    return core.Builder(root_package,parser)
+
+
 
 def import_module(modulename,extension=None,paths=None):
     """
@@ -38,18 +61,13 @@ def import_module(modulename,extension=None,paths=None):
     :param paths: extra search paths beound the $FBMLPATH.
     :returns: A :class:`~fbml.model.Module`
     """
-    import os
-    if paths is None: paths = []
-    if extension is None: extension = {} 
-    try: paths += os.environ['FBMLPATH'].split(':')
-    except KeyError: log.warning('FBMLPATH not set')
 
     paths.append(os.getcwd())
     
     from . import core 
     from .parsers import xmlformat
     builder = core.Builder(paths,xmlformat.XMLParser(extension))
-    return builder.get_module(modulename)
+    return builder.get_module(modulename).get()
 
 
 def save_module(module,filelike,extensions):
