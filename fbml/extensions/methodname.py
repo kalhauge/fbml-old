@@ -5,7 +5,10 @@ from ..util import matchers
 
 class MethodNameFormat (xmlformat.XMLExtensionFormat):
     def __init__(self):
-        self.setName('MethodName');
+        self.name = 'method_name'
+
+    def parse(self, tree):
+        return tree.text
 
 class has_method_name (matchers.Matcher):
     
@@ -13,16 +16,16 @@ class has_method_name (matchers.Matcher):
         self._method_name = method_name
 
     def _matches(self,method):
-        return method.getRequirement('MethodName') == self._method_name
+        return method.ext.method_name 
 
     def describe_to(self,description):
         description.append('has method name of ')
         description.append(self._method_name)
 
-def getMethodName(function):
-    return function['MethodName']
+def get_method_name(function):
+    return function['method_name']
 
 
 class MethodNameExtension (Extension):
     XML_FORMAT = MethodNameFormat()
-    NAME = 'MethodName'
+    NAME = 'method_name'

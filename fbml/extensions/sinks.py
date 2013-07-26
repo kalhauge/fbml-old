@@ -7,9 +7,9 @@ import xml.etree.ElementTree as ET
 class SinksFormat(xmlformat.XMLExtensionFormat):
     
     def __init__(self): 
-        self.setName('Sinks')
+        self.name = 'sinks'
 
-    def parseEnsure(self,tree):
+    def parse_ensure(self,tree):
         sinks_trees = list(tree.findall('sink'))
         s_dict =((s.attrib['id'],int(s.attrib['slot'])) for s in sinks_trees )
         sinks = dict(s_dict)
@@ -22,7 +22,7 @@ class SinksFormat(xmlformat.XMLExtensionFormat):
         return sinks
 
 
-    def writeEnsureToTree(self,ensure,tree):
+    def write_ensure_to_tree(self,ensure,tree):
         for sid,slot in ensure.items():
             ET.SubElement(tree,'sink',{'slot':str(slot),'id':sid})
 
@@ -33,11 +33,11 @@ class has_sinks_length (matchers.Matcher):
         self._length = length
 
     def _matches (self,method):
-        return self._length == len(method.getEnsurance('Sinks'))
+        return self._length == len(method.ens.sinks)
 
     def describe_to(self,description):
         description.append("has {} number of sinks".format(self._length))
 
 class SinksExtension(Extension):
-    NAME = "Sinks"
+    NAME = "sinks"
     XML_FORMAT = SinksFormat()

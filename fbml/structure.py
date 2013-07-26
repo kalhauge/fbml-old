@@ -10,6 +10,8 @@ Structure
 
 import os
 
+from .util import readonly
+
 class Label (object):
     """
     Label is the identification of the package system
@@ -18,12 +20,12 @@ class Label (object):
     """
 
     def __init__(self, name, parrent):
-        self._name = name
+        self._name = str(name)
         self._parrent = parrent
 
     # Make the name and package, get only variables..
-    name = property(lambda self: self._name)
-    parrent = property(lambda self: self._parrent)
+    name = readonly('_name')
+    parrent = readonly('_parrent') 
 
     def __repr__(self):
         return '.'.join(self.get_name_list()) 
@@ -99,6 +101,8 @@ class Labelable (object):
         self._children[child_label.name] = child_factory(child_label)
         return self._children[child_label.name]
 
+
+         
 class Package (Labelable):
     """
     Package is the core of the package system. A package unless if
@@ -125,10 +129,11 @@ class Package (Labelable):
         name, form the package.
         :param name: the basename of the files and directories wanted
         """
-        posible_names = (os.path.join(path,name) for path in self.paths)
-        return filter(posible_names,lambda fname: os.path.exists(fname))
+        posible_names = [os.path.join(path,name) for path in self.paths]
+        posible_names += [path + '.fl' for path in posible_names] 
+        return filter(lambda fname: os.path.exists(fname), posible_names)
 
-    def make(self,name_list,factory): 
+    def make_from_name_list(self,name_list,factory): 
         """
         Returns a new package the data which is created, from the
         new data. The functions raises a KeyError if the model already
@@ -140,15 +145,17 @@ class Package (Labelable):
             returns a function able to create a package or module
             using a label.
         """
-        if name_list == []: return self.label
-        paths = self.get_paths_from_name(name_list[0])
-        child = self.make(name,factory(list(paths)))
-
-        return child.make(name_list[1:],factory)
-         
+        if not name_list: return self.label
+        paths = list(self.get_paths_from_name(name_list[0]))
+        if not paths: 
+            raise IOError("No posible files/folders of name {name} in {paths}".format( 
+                    name = name_list[0],
+                    paths = self.paths))
+        child = self.make(name_list[0],factory(paths))
+        return child.make_from_name_list(name_list[1:],factory)
 
     def __repr__(self):
-        return repr(self.package_label)
+        return repr(self.label)
 
 
 class RootPackage (Package):
@@ -167,19 +174,19 @@ class RootPackage (Package):
     def __repr__(self):
         return 'root'
 
-class Module (Labelable):
+class Module (Package):
     """
     The module is the top-level container of the structure. The module 
     contains the methods of the program. The model is a package, but 
     should not contain any subpackages.
     """
 
-    def __init__(self, label, imports):
-        super(Module,self).__init__(label) 
+    def __init__(self, paths, label, imports):
+        super(Module,self).__init__(paths=paths,label=label) 
         self._imports = list(imports)
 
     label = property(lambda self: self._label)
     imports   = property(lambda self: self._imports)
 
-    make_method = Module.make
+    make_method = Labelable.make
 

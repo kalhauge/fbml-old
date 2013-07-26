@@ -7,9 +7,9 @@ import xml.etree.ElementTree as ET
 class SourcesFormat(xmlformat.XMLExtensionFormat):
     
     def __init__(self): 
-        self.setName('Sources')
+        self.name = 'sources'
 
-    def parseRequire(self,tree):
+    def parse_require(self,tree):
         sources_trees = list(tree.findall('source'))
         s_dict =((int(s.attrib['slot']),s.attrib['id']) for s in sources_trees )
         sources = dict(s_dict)
@@ -21,7 +21,7 @@ class SourcesFormat(xmlformat.XMLExtensionFormat):
         return sources
 
 
-    def writeRequireToTree(self,require,tree):
+    def write_require_to_tree(self,require,tree):
         for slot,sid in require.items():
             ET.SubElement(tree,'source',{'slot':str(slot),'id':sid})
 
@@ -32,7 +32,7 @@ class has_sources_length (matchers.Matcher):
         self._length = length
 
     def _matches (self,method):
-        return self._length == len(method.getRequirement('Sources'))
+        return self._length == len(method.req.source)
 
     def describe_to(self,description):
         description.append("has {} number of sources".format(self._length))
@@ -40,5 +40,5 @@ class has_sources_length (matchers.Matcher):
 
 
 class SourcesExtension(Extension):
-    NAME = "Sources"
+    NAME = "sources"
     XML_FORMAT = SourcesFormat()

@@ -16,11 +16,12 @@ class Extension (object):
 
     def name(self):
         return self.__class__.NAME
+
     def xml_formatter(self):
         return self.__class__.XML_FORMAT
 
-    def dict_tuble(self):
-        return (self.getName(),self)
+    def tuble(self):
+        return (self.name(),self)
 
 
 

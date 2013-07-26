@@ -6,13 +6,11 @@
 
 """
 from . import model
+from . import structure
 from .util import exceptions
 
+from functools import partial 
 import os
-
-def build(module_name,env):
-    return env.get_module(module_name) 
-
 
 class Builder (object):
 
@@ -23,60 +21,75 @@ class Builder (object):
     def get_module(self, module_name):
         name_list = module_name.split('.')
         def factory(paths):
-            if os.path.isfolder(paths[0]): 
+            if os.path.isdir(paths[0]): 
                 return partial(structure.Package,paths=paths)
             elif os.path.isfile(paths[0]):
-                return partial(Builder.build_module,path=paths[0],self=self)
+                return partial(self.build_module,path=paths[0])
         try:
-            return self.root_package.make(name_list,factory)
+            return self.root_package.make_from_name_list(name_list,factory)
         except KeyError:
-            return structure.Label.from_string(module_name,root_package) 
+            return structure.Label.from_string(module_name,self.root_package) 
              
 
-    def build_module(self, path, label):
+    def build_module(self, label, path):
         """
         Builds a module using the path to the file, and 
         a label. 
         """
         with open(path) as module_file:
             module_tree = self.parser.parse(module_file)
-        imports = (self.get_module(mn) for imp in module_tree.imports)
-        module = structure.Module(label,imports)
+        imports = (self.get_module(imp) for imp in module_tree.imports)
+        module = structure.Module(path, label, imports)
         for method in module_tree.methods:
-            module.make_method(method.method_id,self.factory(method,'method'))
+            module.make_method(method.id,self.factory(method,'method'))
+        for impl in module_tree.impls:
+            method = structure.Label.from_string(impl.method_id,module).get()
+            method.make_impl(self.factory(impl,'impl'))
         return module
 
-    def build_method(self, tree, label):
+    def build_method(self, label, tree):
         method = model.Method(label)
-        method.make_impl(self.factory(tree.impl,'impl'))
         for req in tree.requirements:
             method.req.set(req.name,req.data)
         for ens in tree.ensurances:
             method.ens.set(ens.name,req.data)
         return method
 
-    def build_impl(self, tree, label):
+    def build_impl(self, label, tree):
         impl = model.Impl(label)
-        for fun in impl.functions:
-            self.make_function(fun.function_id,self.factory(fun,'function'))
+        for slot, name in impl.label.parrent.req.sources.items():
+            impl.make_function(slot,self.build_load_function(name)); 
+        functions = []
+        for fun in tree.functions:
+            functions.append(
+                    impl.make_function(fun.id,self.factory(fun,'function'))
+                    )
+        for function, tree in zip(functions,tree.functions):
+            for source in tree.sources:
+                function.make_source(source.slot, self.factory(source,'source'))
         return impl
 
-    def build_function(self, tree, label):
-        function = model.Function(location)
+    def build_load_function(self, name):
+        def factory(label):
+            function = model.Function(label)
+            function.req.method_name = "IN"
+            sink = function.make_sink(0,name,model.Sink)
+        return factory
+
+    def build_function(self, label, tree):
+        function = model.Function(label)
         for sink in tree.sinks:
-            self.make_sink(sink.slot, self.factory(sink,'sink')) 
-        for source in function_tree.source:
-            self.make_source(source.slot, self.factory(source,'source')) 
+            function.make_sink(sink.slot, sink.id, self.factory(sink,'sink')) 
         self.assing_extends(tree,function)
         return function
    
-    def build_sink(self, tree, label, target):
+    def build_sink(self, target, label, tree):
         sink = model.Sink(label,target)
         self.assing_extends(tree, sink)
         return sink
 
-    def build_source(self, tree, target):
-        source = model.Source(label.parrent.impl.get_sink(tree.sink_id),target)
+    def build_source(self, target, tree):
+        source = model.Source(target.parrent.impl.get_sink(tree.sink_id),target)
         self.assing_extends(tree,source)
         return source
 
@@ -85,7 +98,7 @@ class Builder (object):
            obj.ext.set(ext.name,ext.data) 
 
     def factory(self, tree, name):
-        return partial(getattr(self,name),tree = tree)
+        return partial(getattr(self,'build_'+name),tree = tree)
 
         
         

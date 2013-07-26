@@ -190,7 +190,9 @@ class XMLExtensionFormats (object):
             log.warning(
                     'Found name %s, no known extension parser', 
                     name)
-            return XMLExtensionFormat().set_name(name)
+            form = XMLExtensionFormat()
+            form.name = name
+            return form 
 
     def parse(self,extend,tree_extend): 
         extend.data = self.get_extend_format(extend.name).parse(tree_extend)
@@ -221,18 +223,12 @@ class XMLExtensionFormat (object):
     def parse(self,tree):
         return tree 
 
-    def parse_require(self,tree):
-        return tree
-
-    def parse_ensure(self,tree):
-        return tree
+    parse_require = parse
+    parse_ensure = parse
 
     def write_to_tree(self,data,tree):
         tree.text = str(data)
 
-    def write_ensure_to_tree(self,data,tree):
-        tree.text = str(data)
-
-    def write_require_to_tree(self,data,tree):
-        tree.text = str(data)
+    write_ensure_to_tree = write_to_tree
+    write_require_to_tree = write_to_tree
 

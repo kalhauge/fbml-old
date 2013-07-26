@@ -27,7 +27,7 @@ def get_extensions(*args):
     from .parsers.xmlformat import XMLExtensionFormats
     args = list(args)
     args.extend(['Sources','Sinks'])
-    return XMLExtensionFormats(extensions[a]().getDictTuble() for a in args)
+    return XMLExtensionFormats(extensions[a]().tuble() for a in args)
 
 def import_module(modulename,extension=None,paths=None):
     """
