@@ -52,8 +52,6 @@ def public_list(name):
         return self
     return property(lambda self: getattr(self,name),setter)
 
-class ExtendableParseObject (ParseObject):
-    extends = public_list('_extends')
 
 class Module(ParseObject):
 
@@ -83,7 +81,7 @@ class Impl(ParseObject):
         self.functions = list(seq)
 
 
-class Function(ExtendableParseObject):
+class Function(ParseObject):
    
     def requried_attributes(self): return ['id']
     
@@ -93,16 +91,10 @@ class Function(ExtendableParseObject):
     def set_sources(self,seq):
         self.sources = list(seq)
 
-class Sink(ExtendableParseObject):
+class Sink(ParseObject):
     def requried_attributes(self): return ['id']
 
-class Source(ExtendableParseObject): 
-    def requried_attributes(self): return ['slot']
-
-class Target(ExtendableParseObject): 
-    def requried_attributes(self): return ['slot']
-
-class Slot(ExtendableParseObject):
+class Slot(ParseObject):
     def requried_attributes(self): return ['id']
 
 class Extends(ParseObject):

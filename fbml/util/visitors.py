@@ -9,13 +9,13 @@ def calculate_reachable_functions(sinks):
         if not sink.function in f_set:
             # Sink depend on a function not allready in set
             f_set.add(sink.function);
-            q.extend(source.sink for source in sink.function.sources);
+            q.extend(sink for sink in sink.function.sources);
         else: sources.append(sink);
 
     return f_set
 
 def calculate_runorder(impl):
-    f_set = calculate_reachable_functions(impl.method.internal_sinks)
+    f_set = calculate_reachable_functions(impl.method.targets)
     helper = dict()
     return sorted(f_set,key=lambda a : a.depth(helper));        
 
@@ -33,7 +33,7 @@ class DataFlowVisitor (object):
         
         results = self.setup(method);
         for function in runorder:
-            sinks_results = (results[s.sink] for s in function.sources)
+            sinks_results = (results[s] for s in function.sources)
             source_results = self.merge(function,sinks_results)
             results.update(self.apply(function,source_results))
         ret_method = self.final(method,results)

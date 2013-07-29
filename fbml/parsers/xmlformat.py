@@ -111,7 +111,6 @@ def module_format(parser, tree):
     module.imports = parser.parse_objects(tree, 'import')
     module.methods = parser.parse_objects(tree, 'method')
     module.impls   = parser.parse_objects(tree, 'impl')
-    print (module, moule.imports)
     return module
 
 def import_format(parser, tree):
@@ -130,9 +129,9 @@ def impl_format(parser, tree):
 
 def function_format(parser, tree):
     function = Function(**tree.attrib)
-    function.extend = parser.parse_object(tree.find('extend'))
-    function.sources = parser.parse_object(tree.find('sources'))
-    function.sinks = parser.parse_object(tree.find('sinks'))
+    function.extends = parser.parse_object_from_name(tree,'extend')
+    function.sources = parser.parse_object_from_name(tree,'sources')
+    function.sinks = parser.parse_object_from_name(tree,'targets')
     return function
 
 def slot_dict_format(parser, tree):
@@ -140,19 +139,27 @@ def slot_dict_format(parser, tree):
     return dict((obj.id, obj.sink) for obj in objects)
 
 def extend_format(parser, tree):
-    extends = Extends(**tree.attrib)
+    extends = Extends()
     parser.parse_subobjects(extends,tree)
     return extends
 
 def sink_format(parser, tree):
     sink = Sink(**tree.attrib)
-    parser.parse_subobjects(sink,tree)
+    sink.extends = Extends(**{});
+    parser.parse_subobjects(sink.extends,tree)
     return sink
 
 def slot_format(parser, tree):
     slot = Slot(**tree.attrib)
-    slot.sink = parser.parse_object(tree.find('sink'))
+    try:
+        slot.sink = parser.parse_object_from_name(tree,'sink')
+    except exceptions.MallformedFlowError:
+        slot.sink = None
     return slot
+
+def std_format(parser, tree):
+    log.debug("Parsing unknown %s",tree)
+    return tree
 
 class XMLParser (object):
     _std_formats = {
@@ -178,8 +185,9 @@ class XMLParser (object):
         return self.parse_object(ET.parse(filelike).getroot())
 
     def parse_objects(self, tree, name):
-        return [ self.parse_object(subtree)
-            for subtree in tree.findall(name)]
+        def parse(subtree):
+            return self.parse_object(subtree, name)
+        return [parse(subtree) for subtree in tree.findall(name)]
 
     def parse_subobject(self, parrent, tree):
         setattr(parrent,tree.tag,self.parse_object(tree))
@@ -188,9 +196,18 @@ class XMLParser (object):
         for subtree in tree:
             self.parse_subobject(parrent, subtree)
 
-    def parse_object(self, tree):
-        if not tree: return None
-        return self.formats[tree.tag](self,tree)
+
+    def parse_object_from_name(self, tree, name):
+        subtree = tree.find(name)
+        try:
+            return self.parse_object(subtree,name)
+        except exceptions.MallformedFlowError:
+            raise exceptions.MallformedFlowError('In tree {}'.format(tree))
+        
+    def parse_object(self, tree, name=None):
+        if tree is None:
+            raise exceptions.MallformedFlowError('Missed to parse an object: {} {}'.format(tree, name))
+        return self.formats.get(tree.tag,std_format)(self,tree)
 
 class XMLExtensionFormats (object):
 
@@ -227,7 +244,5 @@ class XMLExtensionFormat (object):
         return tree 
 
     def write(self, tag, data, tree):
-        import pdb; pdb.set_trace()
-        print(tag,data,tree.attrib['name'])
         tree.append(data)
 

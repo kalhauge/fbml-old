@@ -70,10 +70,10 @@ class Method (Namespace):
 
     """
 
-    def __init__(self, label):
+    def __init__(self, label, requirements, ensurances):
         super(Method,self).__init__(label)
-        self._requirements = ExtensionManager()
-        self._ensurances = ExtensionManager()
+        self._requirements = requirements
+        self._ensurances = ensurances 
 
     req = readonly('_requirements')
     ens = readonly('_ensurances')
@@ -83,12 +83,12 @@ class Method (Namespace):
         return self.find('impl')
 
     @property 
-    def internal_sinks(self):
-        return [self.impl.sinks[name] for name in self.ens.sinks]
+    def targets(self):
+        return [self.impl.sinks[sink.id] for sink in self.ens.targets.values()]
 
     @property
-    def internal_sources(self):
-        return [self.impl.sinks[name] for name in self.req.sources.values()]
+    def sources(self):
+        return [self.impl.sinks[sink.id] for sink in self.req.sources.values()]
 
     def make_impl(self, factory):
         self.make('impl',factory)
@@ -141,7 +141,7 @@ class Function (Namespace, Extendable):
     def depth(self,helper):
         if not self in helper:
             if not self.sources: depth = 0;
-            else: depth = max(sinks.depth(helper) for sink in self.sources) +1
+            else: depth = max(sink.depth(helper) for sink in self.sources) +1
             helper[self] = depth;
         return helper[self]
 

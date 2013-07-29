@@ -33,7 +33,7 @@ def method_to_dot(method, filelike):
     filelike.write( "  node [shape=record,style=rounded,height=0.1];\n")
     filelike.write('  ' + '\n  '.join(DotVisitor().visit(method)) + "\n")
 
-    for sink in method.internal_sinks:
+    for sink in method.targets:
         filelike.write('  OUT_{} [label = "{}"];\n'.format(
                 id_(sink),id_(sink)))
         filelike.write('  "{}":{} -> "OUT_{}";\n'.format(
@@ -58,10 +58,10 @@ class DotVisitor (fbml.ControlFlowVisitor):
 
     def apply(self,function,dotlines):
         
-        in_str = "|".join(["<{}>".format(id_(s.sink)) 
+        in_str = "|".join(["<{}>".format(id_(s)) 
                         for s in function.sources]);
         out_str = "|".join(["<{}>".format(id_(s))
-                        for s in function.sinks]);
+                        for s in function.targets]);
         function_str= '{} [label="{{{}}}"];'.format(
             function.label.name,
             '{} {} {}'.format(
@@ -73,8 +73,7 @@ class DotVisitor (fbml.ControlFlowVisitor):
             )
         
         connections = []
-        for source in function.sources:
-            sink = source.sink;
+        for sink in function.sources:
             con = '"{}":{} -> "{}":{};'.format(
                     id_(sink.function),
                     id_(sink),
