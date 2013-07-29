@@ -1,5 +1,6 @@
 ## Binaries ##
 *.swp
+*.swo
 *.pyc
 _build
 build
