@@ -111,6 +111,7 @@ def module_format(parser, tree):
     module.imports = parser.parse_objects(tree, 'import')
     module.methods = parser.parse_objects(tree, 'method')
     module.impls   = parser.parse_objects(tree, 'impl')
+    print (module, moule.imports)
     return module
 
 def import_format(parser, tree):
