@@ -9,15 +9,13 @@ def calculate_reachable_functions(sinks):
         if not sink.function in f_set:
             # Sink depend on a function not allready in set
             f_set.add(sink.function);
-            q.extend(source.sink 
-                    for source in sink.function.sources.values());
+            q.extend(source.sink for source in sink.function.sources);
         else: sources.append(sink);
 
     return f_set
 
 def calculate_runorder(impl):
-    sinks = impl.method.internal_sinks()
-    f_set = calculate_reachable_functions(sinks)
+    f_set = calculate_reachable_functions(impl.method.internal_sinks)
     helper = dict()
     return sorted(f_set,key=lambda a : a.depth(helper));        
 
@@ -32,12 +30,10 @@ class DataFlowVisitor (object):
             return self._methods[method]
         impl = method.impl
         runorder = calculate_runorder(impl)
-        initial_sink_results = self.setup(method);
-        results = dict((s.getId(),initial_sink_results[s.getSlot()])
-                        for s in method.getSources())
+        
+        results = self.setup(method);
         for function in runorder:
-            sinks_results = (results[s.getSink().getId()] 
-                                for s in function.getSources())
+            sinks_results = (results[s.sink] for s in function.sources)
             source_results = self.merge(function,sinks_results)
             results.update(self.apply(function,source_results))
         ret_method = self.final(method,results)
@@ -47,7 +43,7 @@ class DataFlowVisitor (object):
     def setup(self,method):
         """
         Recieves a method and for each source, returns a dict/list of start
-        information
+        information Sink -> Info
         """
         pass
     
@@ -60,7 +56,7 @@ class DataFlowVisitor (object):
 
     def apply(self,function,sources):
         """
-        For each function take the sources and retun the sinks
+        For each function take the sources and retrun the sinks
         the sources are slot oriented. The output sinks should orderd in 
         a dict.
         """

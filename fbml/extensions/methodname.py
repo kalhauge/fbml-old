@@ -7,8 +7,11 @@ class MethodNameFormat (xmlformat.XMLExtensionFormat):
     def __init__(self):
         self.name = 'method_name'
 
-    def parse(self, tree):
+    def parse(self,tag, tree):
         return tree.text
+
+    def write(self, tag, data, tree):
+        tree.text = data
 
 class has_method_name (matchers.Matcher):
     
@@ -16,7 +19,7 @@ class has_method_name (matchers.Matcher):
         self._method_name = method_name
 
     def _matches(self,method):
-        return method.req.method_name 
+        return method.req.method_name == self._method_name 
 
     def describe_to(self,description):
         description.append('has method name of ')

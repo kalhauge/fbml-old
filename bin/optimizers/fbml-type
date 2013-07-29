@@ -1,11 +1,59 @@
 #!python
 """
-Adds types to the flow. 
+.. program:: fbml-type
+.. codeauthor:: Christian Gram Kalhauge <kalhauge@cbs.dtu.dk>
+
+
 """
-import sys
+
+import os
 
 import fbml
 import fbml.extensions.type as typeext
+
+import logging
+log = logging.getLogger('fbml-type')
+logging.basicConfig(level=logging.DEBUG)
+
+def main(args):
+    used_extensions = ['method_name','type'] 
+    builder = fbml.get_builder(
+            paths=[os.getcwd()],
+            extensions=used_extensions)
+
+    module = builder.label_from_string(args.modulename).get()
+
+    def type_methods(method):
+        if 'type' in method.ens.get_all(): return method;
+        return typeext.TypeSetter(module).visit(method)
+
+
+    methods = [type_methods(method) for method in module.methods]
+    
+    fbml.save_module(
+            module,
+            sys.stdout if not args.output else args.output,
+            used_extensions)
+    return 0
+
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('modulename',
+            help='''The name of the module to optimize''')
+    parser.add_argument('--in_place',action='store_true',
+            help='''If used this optimizer will perform the optimization in-place
+                    instead of outputing the new data the output position''')
+    parser.add_argument('-a','--output',
+            help='''The output position of the result, if none is given the
+                    output will be done to the stdout''')
+    args = parser.parse_args()
+    return args
+
+if __name__ == '__main__':
+    import sys
+    logging.basicConfig(level=logging.INFO)
+    sys.exit(main(parse_args()))
 
 def main():
     args = parseArgs()
@@ -23,18 +71,3 @@ def main():
 
     fbml.saveModule(module,sys.stdout if args.output is None else args.output,ext) 
 
-def parseArgs():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('modulename',
-            help='''The name of the module to optimize''')
-    parser.add_argument('--in_place',action='store_true',
-            help='''If used this optimizer will perform the optimization in-place
-                    instead of outputing the new data the output position''')
-    parser.add_argument('-a','--output',
-            help='''The output position of the result, if none is given the
-                    output will be done to the stdout''')
-    args = parser.parse_args()
-    return args
-
-if __name__ == '__main__': main()

@@ -27,7 +27,7 @@ class Builder (object):
         return structure.Label.from_string(string,self.root_package,self.package_factory)
 
     def get_module(self, module_name):
-        self.label_from_string(module_name).get()
+        return self.label_from_string(module_name).get()
              
     def package_factory(self,label):
         parrent = label.parrent
@@ -70,7 +70,7 @@ class Builder (object):
     def build_impl(self, label, tree):
         impl = model.Impl(label)
         for slot, name in impl.method.req.sources.items():
-            impl.make_function(slot,self.build_load_function(name)); 
+            impl.make_function('f_load_' + str(slot),self.build_load_function(name)); 
         functions = []
         for fun in tree.functions:
             functions.append(
@@ -86,6 +86,7 @@ class Builder (object):
             function = model.Function(label)
             function.ext.method_name = name
             sink = function.make_sink('output',name,model.Sink)
+            return function
         return factory
 
     def build_function(self, label, tree):

@@ -14,6 +14,7 @@ import logging
 log = logging.getLogger('fbml.structure')
 
 from .util import readonly
+from .util import exceptions
 
 class Label (object):
     """
@@ -53,14 +54,17 @@ class Label (object):
         return root_package.find_or_make(name_list,factory).label
 
             
-class Labelable (object):
+class Namespace (object):
 
     def __init__(self,label):
         self._label = label
         self._children = dict() 
 
     label = readonly('_label')
-    children = property(lambda self: dict(self._children))
+
+    @property
+    def children(self):
+        return dict(self._children)
 
     def find_or_make(self, name_list, factory):
         """
@@ -71,8 +75,8 @@ class Labelable (object):
         try:
             subpackage = self.find(name_list[0])
         except KeyError:
-            log.debug("Subpackage {name} not found, try to create",
-                    name=name_list[0])
+            log.debug("Subpackage %s not found, try to create",
+                    name_list[0])
             subpackage = self.make(name_list[0],factory)
             
         return subpackage.find_or_make(name_list[1:],factory)
@@ -116,7 +120,7 @@ class Labelable (object):
 
 
          
-class Package (Labelable):
+class Package (Namespace):
     """
     Package is the core of the package system. A package unless if
     it is the root package is does always have a parrent.
@@ -132,9 +136,7 @@ class Package (Labelable):
         super(Package,self).__init__(label)
         self._paths = paths 
 
-    #Read only
-    paths = property(lambda self: self._paths)
-
+    paths = readonly('_paths')
 
     def get_paths_from_name(self, name):
         """
@@ -177,10 +179,29 @@ class Module (Package):
         super(Module,self).__init__(paths=paths,label=label) 
         self._imports = list(imports)
 
-    label = property(lambda self: self._label)
-    imports   = property(lambda self: self._imports)
+    label   = readonly('_label')
+    imports = readonly('_imports')
 
-    make_method = Labelable.make
+    @property
+    def methods(self):
+        return self._children.values()
+
+    def make_method(self, name, factory):
+        return self.make(name, factory) 
+
+    def get_methods_where(self,matcher):
+        results = [method for method in self.methods if matcher.matches(method)]
+        for imp in self.imports:
+            results.extend(imp.get_methods_where(matcher))
+        return results
+
+    def get_method_where(self,matcher):
+        results = self.get_methods_where(matcher)
+        if len(results) > 1: 
+            raise exceptions.AmbiguousMethodCall(results,matcher)
+        elif not results:
+            raise exceptions.NoMethodCall(matcher)
+        return results[0]
 
     def find_or_make(self, name_list, factory):
         """
@@ -190,3 +211,5 @@ class Module (Package):
         """
         return self.find_from_name_list(name_list);
 
+    def __repr__(self):
+        return "<Module : {self.label}>".format(self=self)

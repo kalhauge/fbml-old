@@ -2,57 +2,57 @@
 <!DOCTYPE fbml SYSTEM "../doctypes/fbml-noext.dtd">
 <fbml version="0.0">
     <method id="add-integer">
-        <require name="MethodName">Add</require>
-        <require name="Sources">  
+        <require name="method_name">Add</require>
+        <require name="sources">  
             <source id="a" slot="0"/>
             <source id="b" slot="1"/>
         </require>
-        <require name="Type">
+        <require name="type">
             <type slot="0">Integer</type>
             <type slot="1">Integer</type>
         </require>
-        <ensure name="Sinks">  
+        <ensure name="sinks">  
             <sink id="c" slot="0"/>
         </ensure>
-        <ensure name="Type">
+        <ensure name="type">
             <type slot="0">Integer</type>
         </ensure>
         <ensure name="llvm">add</ensure>
     </method>
 
     <method id="add-real">
-        <require name="MethodName">Add</require>
-        <require name="Sources">  
+        <require name="method_name">Add</require>
+        <require name="sources">  
             <source id="a" slot="0"/>
             <source id="b" slot="1"/>
         </require>
-        <require name="Type">
+        <require name="type">
             <type slot="0">Real</type>
             <type slot="1">Real</type>
         </require>
-        <ensure name="Sinks">  
+        <ensure name="sinks">  
             <sink id="c" slot="0"/>
         </ensure>
-        <ensure name="Type">
+        <ensure name="type">
             <type slot="0">Real</type>
         </ensure>
         <ensure name="llvm">fadd</ensure>
     </method>
 
     <method id="sub-integer">
-        <require name="MethodName">Substract</require>
-        <require name="Sources">  
+        <require name="method_name">Substract</require>
+        <require name="sources">  
             <source id="a" slot="0"/>
             <source id="b" slot="1"/>
         </require>
-        <require name="Type">
+        <require name="type">
             <type slot="0">Integer</type>
             <type slot="1">Integer</type>
         </require>
-        <ensure name="Sinks">  
+        <ensure name="sinks">  
             <sink id="c" slot="0"/>
         </ensure>
-        <ensure name="Type">
+        <ensure name="type">
             <type slot="0">Integer</type>
         </ensure>
         <ensure name="llvm">sub</ensure>
@@ -60,19 +60,19 @@
     
 <!--
     <method id="print-integer">
-        <require name="MethodName">Print</require>
+        <require name="method_name">Print</require>
         <require name="Sources">
             <source id="io_in" slot="0"/>
             <source id="printable" slot="1"/>
         </require>
-        <require name="Type">
+        <require name="type">
             <type id="io_in">IO</type>
             <type id="printable">Integer</type>
         </require>
-        <ensure name="Sinks">
+        <ensure name="sinks">
             <sink   id="io_out" slot="0"/>
         </ensure>
-        <ensure name="Type">
+        <ensure name="type">
             <type id="io_out">IO</type>
         </ensure>
     </method> -->

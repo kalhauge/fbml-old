@@ -8,38 +8,48 @@ import xml.etree.ElementTree as ET
 
 
 def get_source_types(function):
-    return [s['Type'] for s in function.get_sources()]
+    return [s['type'] for s in function.get_sources()]
 
 class TypeFormat (xmlformat.XMLExtensionFormat):
     def __init__(self): 
-        self.name = 'Type'
+        self.name = 'type'
 
-    def parse_require(self,tree):
-        m = ((int(x.attrib['slot']),Type.new(x.text)) for x in tree.findall('type'))
+    def parse_method(self,tree):
+        m = ((x.attrib['slot'],Type.new(x.text)) for x in tree.findall('type'))
         return dict(m)
 
-    def parse_ensure(self,tree):
-        m = ((int(x.attrib['slot']),Type.new(x.text)) for x in tree.findall('type'))
+    def parse_extend(self,tree):
+        m = ((x.attrib['slot'],Type.new(x.text)) for x in tree.findall('type'))
         return dict(m)
 
-    def parse(self,tree):
-        return Type.new(tree.find('type').text)
+    def parse(self,tag,tree):
+        return self.parse_functions[tag](self,tree)
 
-    def write_require_toTree(self,req,tree):
+    parse_functions = {
+            'extend' : parse_extend,
+            'require' : parse_method,
+            'ensure' : parse_method
+            }
+
+    def write(self, tag, req, tree):
+        self.write_functions[tag](self,req,tree) 
+
+    def write_method(self,req,tree):
         for slot,type_ in req.items():
-            ET.SubElement(tree,'type',{'slot':str(slot)}).text = type_.get_name()
+            ET.SubElement(tree,'type',{'slot':str(slot)}).text = type_.name()
 
-    def write_ensure_to_tree(self,req,tree):
-        for slot,type_ in req.items():
-            ET.SubElement(tree,'type',{'slot':str(slot)}).text = type_.get_name()
+    def write_extend(self,ext,tree):
+        ET.SubElement(tree,'type').text = ext.name()
 
-    def write_toTree(self,ext,tree):
-        ET.SubElement(tree,'type').text = ext.get_name()
-
+    write_functions = {
+            'extend': write_extend,
+            'require': write_method,
+            'ensure': write_method
+            }
 
 def could_be(t,method,i):
     try:
-        return isinstance(t,Any) or t.get_name() == method.get_requirement('Type')[i].get_name() 
+        return isinstance(t,Any) or t.name() == method.req.type[i].name() 
     except KeyError:
         return False
 
@@ -65,7 +75,7 @@ class Type (object):
         return False
 
     def __repr__(self):
-        return "<Type {}>".format(self.get_name())
+        return "<type {}>".format(self.name())
 
 class Integer (Type):
     def name(self): return "Integer"
@@ -93,7 +103,7 @@ _types = {
 
 
 class TypeExtension(Extension):
-    NAME = "Type"
+    NAME = "type"
     XML_FORMAT = TypeFormat()
 
 
@@ -104,43 +114,34 @@ class TypeSetter (visitors.DataFlowVisitor):
         self.module = module
 
     def setup(self,method):
-        from .. import model
-        sources = method.get_sources()
-        impl = method.get_impl()
-        new_sources = [model.Sink(s.get_id(),s.get_slot()) for s in sources]
-        def get_type(method,i):
+
+        slot_sinks = dict((slot, method.impl.sinks[source_name])
+                for slot, source_name in method.req.sources.items())
+
+        for slot, sink in slot_sinks.items():
             try:
-                return method.get_requirement('Type')[i] 
+                if sink.ext.type != method.req.type[slot]:
+                    raise Exception("In consistent state on source {} and method {}"
+                            .format(source.ext.type, method.req.type[slot]))
             except KeyError:
-                return Type.new('Any')
-
-        s_types = [getType(method,i) for i in range(len(sources))]
-
-        for i,t in enumerate(s_types):
-            new_sources[i]['Type'] = t
-
-        return new_sources
+                sink.ext.type = method.req.type[slot]
+        return dict((sink, sink.ext.type) for sink in slot_sinks.values())
 
     def merge(self,function,sinks):
-        from .. import model
-        sinks = list(sinks)
-        new_sources = [model.Source(s,i) for i,s in enumerate(sinks)]
-        
-        for new,old in zip(new_sources,function.get_sources()):
-            new.set_extensions(old.get_extensions().values())
-        
-        for source,sink in zip(new_sources,sinks):
-            source['Type'] = sink['Type']
-
-        return new_sources
+        sources = dict()
+        for source in function.sources:
+            source.ext.type = source.sink.ext.type
+            sources[source] = source.ext.type
+        return sources
 
     def apply(self,function,sources):
         from .. import model
+        if not function.sources: return {function.sinks[0]:function.sinks[0].ext.type}
         #Determine typesj
-        types = [(source.get_slot(),source['Type'])
+        types = [(source.slot, source.ext.type)
                     for source in sources]
 
-        method_name = function['MethodName']
+        method_name = function.ext.method_name
         from .methodname import has_method_name
         from .sources import has_sources_length
         from .sinks import has_sinks_length
@@ -148,50 +149,25 @@ class TypeSetter (visitors.DataFlowVisitor):
         method = self.module.get_method_where(
                 matchers.all_of(
                     has_types(types),
-                    has_method_name(methodName),
+                    has_method_name(method_name),
                     has_sources_length(len(sources)),
-                    has_sinks_length(len(function.get_sinks()))
+                    has_sinks_length(len(function.sinks))
                     )
                 )
-        
-        if not 'Type' in method.get_ensurances(): 
-            method = self.visit(method)
-        
-        new_sinks = [model.Sink(sink.get_id(),sink.get_slot()) for sink in function.get_sinks()]
-        s_types = [method.get_ensurance('Type')[i] for i in range(len(new_sinks))]
+        try: method_types = method.ens.type
+        except KeyError: 
+            self.visit(method)
+            method_types = method.ens.type
+       
+        for sink in function.sinks:
+            sink.ext.type = method_types[sink.slot]
 
-        new_function = model.Function(function.get_id())
-        
-        for new,old in zip(new_sinks,function.get_sinks()):
-            new.set_extensions(old.get_extensions().values())
-        
-        for i,t in enumerate(s_types):
-            new_sinks[i]['Type'] = t
-            new_sinks[i].add_function(new_function)
-
-        for s in sources:
-            s.add_function(new_function)
-
-        new_function.add_sources(sources)
-        new_function.add_sinks(new_sinks)
-        new_function.set_extensions(function.get_extensions().values())
-        
-        return ((sink.get_id(),sink) for sink in new_sinks)
+        return dict((sink, sink.ext.type) for sink in function.sinks)
 
 
-    def final(self,method,sinks):
-        from .. import model
-        new_method = model.Method(method.get_internal_id())
-        new_method.add_ensurances(method.get_ensurances().values())
-        new_method.add_requirements(method.get_requirements().values())
+    def final(self,method,sink_types):
+        method.ens.type = dict( 
+                (sink.slot, sink_types[sink]) 
+                for sink in method.internal_sinks)
 
-        new_impl = model.Impl(new_method)
-        new_impl.add_sinks(sinks.values())
-        new_impl.add_functions(visitors.calculate_reachable_functions(sinks.values()))
-
-        sink_types = dict(
-                (new_method.get_ensurance('Sinks')[sink.get_id()],sink['Type']) 
-                    for sink in new_method.get_sinks())
-
-        new_method.set_ensurance('Type',sink_types)
-        return new_method
+        return method

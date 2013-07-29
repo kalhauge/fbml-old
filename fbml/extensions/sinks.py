@@ -9,20 +9,17 @@ class SinksFormat(xmlformat.XMLExtensionFormat):
     def __init__(self): 
         self.name = 'sinks'
 
-    def parse_ensure(self,tree):
+    def parse(self, tag, tree):
+        if tag != 'ensure':
+            raise exceptions.MallformedFlowError('Sinks can only be in ensurances')
         sinks_trees = list(tree.findall('sink'))
         s_dict =((s.attrib['id'],int(s.attrib['slot'])) for s in sinks_trees )
         sinks = dict(s_dict)
         test = set(range(len(sinks_trees))) 
-        if not all(i in test for i in sinks.values()):
-            raise exceptions.MallformedFlowError(
-                'Sinks in {} not squential : {}'.format(
-                    tree.tag,sinks)
-                )
         return sinks
 
 
-    def write_ensure_to_tree(self,ensure,tree):
+    def write(self, tag, ensure, tree):
         for sid,slot in ensure.items():
             ET.SubElement(tree,'sink',{'slot':str(slot),'id':sid})
 

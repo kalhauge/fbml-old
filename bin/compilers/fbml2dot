@@ -16,25 +16,30 @@ from fbml.structure import Label
 
 
 def main(args):
-    builder = fbml.get_builder(paths=[os.getcwd()],extensions=['method_name'])
-
+    builder = fbml.get_builder(paths=[os.getcwd()],extensions=['method_name']) 
     method = builder.label_from_string(args.methodid).get()
-
-    sys.stdout.write("digraph {\n")
-    sys.stdout.write( "  node [shape=record,style=rounded,height=0.1];\n")
-    sys.stdout.write('  ' + '\n  '.join(DotVisitor().visit(method)) + "\n")
-
-    for sink in method.internal_sinks():
-        sys.stdout.write('  OUT_{} [label = "{}"];\n'.format(
-                id_(sink),id_(sink)))
-        sys.stdout.write('  "{}":{} -> "OUT_{}";\n'.format(
-                id_(sink.function),
-                id_(sink),id_(sink)))
-    sys.stdout.write("}\n")
+    if not isinstance(method,fbml.model.Method):
+        log.error("%s is not a Method, it's a: %r",args.methodid,method)
+        return -1
+    method_to_dot(method, sys.stdout)
        
     return 0
 
 def id_(obj): return obj.label.name
+
+
+def method_to_dot(method, filelike):
+    filelike.write("digraph {\n")
+    filelike.write( "  node [shape=record,style=rounded,height=0.1];\n")
+    filelike.write('  ' + '\n  '.join(DotVisitor().visit(method)) + "\n")
+
+    for sink in method.internal_sinks:
+        filelike.write('  OUT_{} [label = "{}"];\n'.format(
+                id_(sink),id_(sink)))
+        filelike.write('  "{}":{} -> "OUT_{}";\n'.format(
+                id_(sink.function),
+                id_(sink),id_(sink)))
+    filelike.write("}\n")
 
 class DotVisitor (fbml.ControlFlowVisitor):
 
@@ -54,9 +59,9 @@ class DotVisitor (fbml.ControlFlowVisitor):
     def apply(self,function,dotlines):
         
         in_str = "|".join(["<{}>".format(id_(s.sink)) 
-                        for s in function.sources.values()]);
+                        for s in function.sources]);
         out_str = "|".join(["<{}>".format(id_(s))
-                        for s in function.sinks.values()]);
+                        for s in function.sinks]);
         function_str= '{} [label="{{{}}}"];'.format(
             function.label.name,
             '{} {} {}'.format(
@@ -68,7 +73,7 @@ class DotVisitor (fbml.ControlFlowVisitor):
             )
         
         connections = []
-        for source in function.sources.values():
+        for source in function.sources:
             sink = source.sink;
             con = '"{}":{} -> "{}":{};'.format(
                     id_(sink.function),

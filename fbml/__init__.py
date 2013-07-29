@@ -20,7 +20,7 @@ def setup():
 
 def get_extensions(names):
     """
-    Returns some of the std extensions, form the names given
+    Returns some of the std extensions, from the names given
     in args
     """
     from .extensions import named_extensions 
@@ -72,6 +72,7 @@ def import_module(modulename,extension=None,paths=None):
 
 def save_module(module,filelike,extensions):
     from .parsers import xmlformat
-    return xmlformat.XMLWriter(extensions).write(module,filelike)
+    extends = get_extensions(extensions + ['sources','sinks'])
+    return xmlformat.XMLWriter(extends).write(module,filelike)
     
 setup()
