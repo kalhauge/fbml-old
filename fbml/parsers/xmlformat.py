@@ -106,78 +106,90 @@ class XMLWriter (object):
         for name, ext in exts.items():
             self.extend_formats.write('extend', name, ext, root)
 
+def module_format(parser, tree):
+    module = Module(**tree.attrib)
+    module.imports = parser.parse_objects(tree, 'import')
+    module.methods = parser.parse_objects(tree, 'method')
+    module.impls   = parser.parse_objects(tree, 'impl')
+    return module
+
+def import_format(parser, tree):
+    return tree.text
+
+def method_format(parser, tree):
+    method = Method(**tree.attrib)
+    parser.parse_subobject(method, tree.find('require'))
+    parser.parse_subobject(method, tree.find('ensure'))
+    return method
+
+def impl_format(parser, tree):
+    impl = Impl(**tree.attrib)
+    impl.functions = parser.parse_objects( tree, 'function')
+    return impl
+
+def function_format(parser, tree):
+    function = Function(**tree.attrib)
+    function.extend = parser.parse_object(tree.find('extend'))
+    function.sources = parser.parse_object(tree.find('sources'))
+    function.sinks = parser.parse_object(tree.find('sinks'))
+    return function
+
+def slot_dict_format(parser, tree):
+    objects = (parser.parse_object(subtree) for subtree in tree.findall('slot'))
+    return dict((obj.id, obj.sink) for obj in objects)
+
+def extend_format(parser, tree):
+    extends = Extends(**tree.attrib)
+    parser.parse_subobjects(extends,tree)
+    return extends
+
+def sink_format(parser, tree):
+    sink = Sink(**tree.attrib)
+    parser.parse_subobjects(sink,tree)
+    return sink
+
+def slot_format(parser, tree):
+    slot = Slot(**tree.attrib)
+    slot.sink = parser.parse_object(tree.find('sink'))
+    return slot
 
 class XMLParser (object):
+    _std_formats = {
+            'fbml'     : module_format,
+            'import'   : import_format,
+            'method'   : method_format,
+            'impl'     : impl_format,
+            'function' : function_format,
+            'targets'  : slot_dict_format,
+            'sources'  : slot_dict_format,
+            'require'  : extend_format,
+            'ensure'   : extend_format,
+            'extend'   : extend_format,
+            'sink'     : sink_format,
+            'slot'     : slot_format,
+            }
 
     def __init__(self,extend_formats):
-        self.extend_formats= extend_formats
+        self.formats = XMLParser._std_formats
+        self.formats.update((e.NAME, e.XML_FORMAT.parse) for e in extend_formats)
 
     def parse(self,filelike):
-        return self.parse_module(ET.parse(filelike).getroot())
+        return self.parse_object(ET.parse(filelike).getroot())
 
-    def parse_module(self,tree_module):
-        module = Module(**tree_module.attrib)
-        module.imports = (self._parse_all(tree_module,'import'))
-#       module.extensions = (self._parse_all(tree_module,'extension'))
-        module.methods = (self._parse_all(tree_module,'method'))
-        module.impls = (self._parse_all(tree_module,'impl'))
-        return module
+    def parse_objects(self, tree, name):
+        return [ self.parse_object(subtree)
+            for subtree in tree.findall(name)]
 
-    def parse_method(self,tree_method):
-        method = Method(**tree_method.attrib)
-        method.set_requirements(self._parse_all(tree_method,'require'))
-        method.set_ensurances(self._parse_all(tree_method,'ensure')) 
-        return method
+    def parse_subobject(self, parrent, tree):
+        setattr(parrent,tree.tag,self.parse_object(tree))
 
-    def parse_impl(self,tree_impl):
-        impl = Impl(**tree_impl.attrib)
-        impl.set_functions(self._parse_all(tree_impl,'function'))
-        return impl
+    def parse_subobjects(self, parrent, tree):
+        for subtree in tree:
+            self.parse_subobject(parrent, subtree)
 
-    def parse_function(self,tree_func):
-        func = Function(**tree_func.attrib)
-        func.extends = (self._parse_all(tree_func,'extend'))
-        func.set_sinks(self._parse_all(tree_func,'sink'))
-        func.set_sources(self._parse_all(tree_func,'source'))
-        return func
-
-    def parse_require(self,tree_require):
-        require = Require(**tree_require.attrib);
-        self.extend_formats.parse('require',require,tree_require)
-        return require
-
-    def parse_ensure(self,tree_ensure): 
-        ensure = Ensure(**tree_ensure.attrib)
-        self.extend_formats.parse('ensure',ensure,tree_ensure)
-        return ensure
-
-    def parse_sink(self,tree_sink):
-        sink = Sink(**tree_sink.attrib)
-        sink.slot = int(sink.slot) 
-        sink.extends = (self._parse_all(tree_sink,'extend'))
-        return sink
-
-    def parse_source(self,tree_source):
-        source = Source(**tree_source.attrib)
-        source.slot = int(source.slot)
-        source.extends = (self._parse_all(tree_source,'extend'))
-        return source
-        
-    def parse_extend(self,tree_extend):
-        extend = Extend(**tree_extend.attrib)
-        self.extend_formats.parse('extend',extend,tree_extend)
-        return extend
-
-    def parse_import(self,tree_import):
-        return tree_import.text
-
-    def parse_extension(self,tree_ext):
-        return tree_ext.text
-
-    def _parse_all(self,tree,name):
-        function = getattr(self,"parse_" + name)
-        return (function(elm) for elm in tree.findall(name))
-
+    def parse_object(self, tree):
+        if not tree: return None
+        return self.formats[tree.tag](self,tree)
 
 class XMLExtensionFormats (object):
 

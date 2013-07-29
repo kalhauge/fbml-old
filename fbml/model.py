@@ -116,18 +116,18 @@ class Function (Namespace, Extendable):
     def __init__(self, label):
         super(Function, self).__init__(label)
         Extendable.__init__(self)
-        self.sinks = list()
+        self.targets = list()
         self.sources = list() 
 
-    def make_sink(self, slot, name, factory):
+    def make_target(self, slot, name, factory):
         def sink_factory(label):
             res = self.make('o'+str(slot), partial(factory,label))
-            self.sinks.append(res);
+            self.targets.append(res);
             return res
         self.impl.make_sink(name,sink_factory)
     
-    def make_source(self, slot, factory):
-        res = self.make('i'+str(slot), factory) 
+    def add_source(self, slot, sink):
+        res = self.make('i'+str(slot),sink.add_user) 
         self.sources.append(res)
         return res
 
@@ -141,16 +141,21 @@ class Function (Namespace, Extendable):
     def depth(self,helper):
         if not self in helper:
             if not self.sources: depth = 0;
-            else: depth = max(src.depth(helper) for src in self.sources) +1
+            else: depth = max(sinks.depth(helper) for sink in self.sources) +1
             helper[self] = depth;
         return helper[self]
 
 
-class Targetable (object):
-    
-    def __init__(self, target):
-        self._target = target
+class Sink (Extendable):
 
+    def __init__(self, label, target):
+        Extendable.__init__(self)
+        self._target = target 
+        self._label = label 
+        self._users = [] 
+   
+    label = readonly('_label')
+    users = readonly('_users')
     target = readonly('_target')
 
     @property
@@ -162,19 +167,9 @@ class Targetable (object):
         return self.target.parrent
 
 
-class Sink (Targetable, Extendable):
-
-    def __init__(self, label, target):
-        Targetable.__init__(self, target)
-        Extendable.__init__(self)
-        self._label = label 
-        self._users = [] 
-   
-    label = readonly('_label')
-    users = readonly('_users')
-
     def add_user(self, user):
         self._users.append(user)
+        return self
 
     def __repr__(self):
         return '<sink {s.label} at {s.target}>'.format(s=self)
@@ -184,20 +179,3 @@ class Sink (Targetable, Extendable):
             helper[self] = self.function.depth(helper) + 1
         return helper[self]
 
-class Source (Targetable, Extendable):
-
-    def __init__(self, sink, target):
-        Targetable.__init__(self, target)
-        Extendable.__init__(self)
-        self._sink = sink
-        self._sink.add_user(self)
-
-    sink = readonly('_sink')
-
-    def __repr__(self):
-        return '<source {s.sink} at {s.target}>'.format(s=self)
-
-    def depth(self,helper):
-        if not self in helper:
-            helper[self] = self.sink.depth(helper) + 1;
-        return helper[self]

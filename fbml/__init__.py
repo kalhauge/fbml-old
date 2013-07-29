@@ -25,7 +25,7 @@ def get_extensions(names):
     """
     from .extensions import named_extensions 
     from .parsers.xmlformat import XMLExtensionFormats
-    return XMLExtensionFormats(named_extensions[a].tuble() for a in names)
+    return [named_extensions[a] for a in names]
 
 def root_from_environment(paths=None):
     import os
@@ -45,7 +45,7 @@ def get_builder(
         extensions = list(extensions) if extensions else list()
         from .parsers import xmlformat
         parser = xmlformat.XMLParser(
-                get_extensions(extensions + ['sources','sinks']))
+                get_extensions(extensions))
 
     from . import core
     return core.Builder(root_package,parser)

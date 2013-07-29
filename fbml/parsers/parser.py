@@ -94,18 +94,18 @@ class Function(ExtendableParseObject):
         self.sources = list(seq)
 
 class Sink(ExtendableParseObject):
-    def requried_attributes(self): return ['id','slot']
+    def requried_attributes(self): return ['id']
 
 class Source(ExtendableParseObject): 
-    def requried_attributes(self): return ['sink_id','slot']
+    def requried_attributes(self): return ['slot']
 
-class Require(ParseObject):
-    def requried_attributes(self): return ['name']
+class Target(ExtendableParseObject): 
+    def requried_attributes(self): return ['slot']
 
-class Ensure(ParseObject):
-    def requried_attributes(self): return ['name']
+class Slot(ExtendableParseObject):
+    def requried_attributes(self): return ['id']
 
-class Extend(ParseObject):
-    def requried_attributes(self): return ['name']
+class Extends(ParseObject):
+    def requried_attributes(self): return []
 
 

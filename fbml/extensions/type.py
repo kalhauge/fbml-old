@@ -7,15 +7,15 @@ from ..parsers import xmlformat
 import xml.etree.ElementTree as ET
 
 
-def get_source_types(function):
-    return [s['type'] for s in function.get_sources()]
+class TypeDoesNotExist(exceptions.MallformedFlowError):
+    """ TypeDoesNotExist is thrown if a type does not exist"""
 
 class TypeFormat (xmlformat.XMLExtensionFormat):
     def __init__(self): 
         self.name = 'type'
 
     def parse_method(self,tree):
-        m = ((x.attrib['slot'],Type.new(x.text)) for x in tree.findall('type'))
+        m = ((x.attrib['slot'],self.parse_type(x)) for x in tree.findall('type'))
         return dict(m)
 
     def parse_extend(self,tree):
@@ -66,10 +66,23 @@ class has_types (matchers.Matcher):
         description.append("has sources matching the pathern {}".format(self.types))
 
 class Type (object):
+    _buildin_types = {
+            'Any',
+            'Integer',
+            'Real',
+            'Char'
+            }
+
+    def __init__(self, name):
+        self.name = name
 
     @staticmethod
     def new(name):
-        return _types[name]()
+        if not name in Type._buildin_types:
+            raise 
+        
+        return Type(name) 
+
 
     def is_unreal(self):
         return False
@@ -77,29 +90,7 @@ class Type (object):
     def __repr__(self):
         return "<type {}>".format(self.name())
 
-class Integer (Type):
-    def name(self): return "Integer"
 
-class Real (Type):
-    def name(self): return "Real"
-
-class Char (Type):
-    def name(self): return "Char"
-
-class Unreal (Type):
-    def name(self): return "Unreal"
-    def is_unreal(self): return True
-
-class Any (Unreal):
-    def name(self): return "Any"
-
-_types = {
-        'Integer' : Integer,
-        'Real' : Real,
-        'Char' : Char,
-        'Unreal' : Unreal,
-        'Any' : Any,
-        }
 
 
 class TypeExtension(Extension):

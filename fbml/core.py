@@ -48,6 +48,7 @@ class Builder (object):
         Builds a module using the path to the file, and 
         a label. 
         """
+        import pdb; pdb.set_trace()
         with open(path) as module_file:
             module_tree = self.parser.parse(module_file)
         imports = (self.get_module(imp) for imp in module_tree.imports)
