@@ -28,6 +28,7 @@ def get_extensions(names):
 
 def root_from_environment(paths=None):
     import os
+    from fbml import structure
     if not paths: paths = []
     try: paths += os.environ['FBMLPATH'].split(':')
     except KeyError: log.warning('FBMLPATH not set')

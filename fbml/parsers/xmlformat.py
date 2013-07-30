@@ -88,11 +88,15 @@ def write_map(writer, value, root):
 
 def write_remote_sink(writer, value, root):
     r_sink = ET.SubElement(root,'remote_sink')
-    r_sink.set('sink',value.label.name)
+    r_sink.set('id',value.label.name)
     if value.is_method_source():
         r_sink.set('source',value.slot)
     if value.is_method_target():
         r_sink.set('target',value.method_target)
+
+def write_std(writer, value, root):
+    root.append(value)
+
 class XMLWriter (object):
 
     _std_formats = {
@@ -146,7 +150,7 @@ class XMLWriter (object):
             ET.SubElement(root,'import').text = repr(imp.label)
 
     def write_object(self, name, value, root):
-        self.formats[name](self, value, root)
+        self.formats.get(name,write_std)(self, value, root)
 
     def write_objects(self, name, values, root):
         for value in values:

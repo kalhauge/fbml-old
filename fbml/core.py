@@ -28,7 +28,11 @@ class Builder (object):
 
     def get_module(self, module_name):
         return self.label_from_string(module_name).get()
-             
+
+    def get_module_from_file(self, module_file, name='main', path = None):
+        return self.root_package.make(name,
+                lambda label: self.build_module(label,module_file,path))
+                 
     def package_factory(self,label):
         parrent = label.parrent
         
@@ -41,15 +45,15 @@ class Builder (object):
         if os.path.isdir(paths[0]): 
             return structure.Package(label,paths)
         elif os.path.isfile(paths[0]):
-            return self.build_module(label,paths[0])
+            with open(paths[0]) as module_file:
+                return self.build_module(label,module_file, paths[0])
 
-    def build_module(self, label, path):
+    def build_module(self, label, module_file, path):
         """
         Builds a module using the path to the file, and 
         a label. 
         """
-        with open(path) as module_file:
-            module_tree = self.parser.parse(module_file)
+        module_tree = self.parser.parse(module_file)
         imports = (self.get_module(imp) for imp in module_tree.imports)
         module = structure.Module(path, label, imports)
         for method in module_tree.methods:

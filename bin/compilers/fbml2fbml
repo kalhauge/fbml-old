@@ -1,0 +1,48 @@
+#!python
+"""
+.. program:: fbml2fbml
+.. codeauthor:: Christian Gram Kalhauge <kalhauge@cbs.dtu.dk>
+
+
+"""
+
+import logging
+log = logging.getLogger('fbml2fbml')
+
+import os
+
+import fbml
+
+extensions = []
+
+def main(args):
+    fbml.save_module(args.module, args.outfile, extensions)
+    return 0
+
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    # Add arguments to parse
+    parser.add_argument('-v','--verbose',action='store_true')
+    parser.add_argument('-m','--modulename')
+    parser.add_argument('-a','--outfile',type=argparse.FileType('w'), default=sys.stdout)
+    parser.add_argument('-l','--libs', action='append', default=list())
+    parser.add_argument('infile',type=argparse.FileType(), default=None, nargs='?')
+    args = parser.parse_args()
+    # Post processing of args
+    if args.verbose:
+        logging.getLogger('fbml').setLevel(logging.DEBUG)
+        log.setLevel(logging.DEBUG)
+        log.debug("Level is set to DEBUG")
+
+    builder = fbml.get_builder(paths=args.libs + [os.getcwd()],extensions=extensions)
+    if not args.infile:
+        args.module = builder.label_from_string(args.modulename).get()
+    else: 
+        args.module = builder.get_module_from_file(args.infile)
+    return args
+
+if __name__ == '__main__':
+    import sys
+    logging.basicConfig(level=logging.INFO)
+    sys.exit(main(parse_args()))

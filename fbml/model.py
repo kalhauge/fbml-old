@@ -176,7 +176,6 @@ class Sink (Extendable):
 
     @property
     def method_target(self):
-        print(self.users,self.is_method_target())
         return [user.name.split('_',1)[1] for user in self.users if isinstance(user.parrent,Method)][0]
 
     def is_method_source(self):
