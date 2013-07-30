@@ -7,78 +7,69 @@
         <require>
             <method_name>multi_add</method_name>
             <sources>
-                <slot id="a"><sink id="a"/></slot>
-                <slot id="b"><sink id="b"/></slot>
-                <slot id="c"><sink id="c"/></slot>
-                <slot id="d"><sink id="d"/></slot>
+                <slot id="a"/>
+                <slot id="b"/>
+                <slot id="c"/>
+                <slot id="d"/>
             </sources>
         </require>
         <ensure>
             <targets>
-                <slot id="e">
-                    <sink id="e"/>
-                </slot>
+                <slot id="e"/>
             </targets>
         </ensure>
     </method>
 
 
     <impl method_id="multi-add">
+
+        <remote_sink id="a" source="a"/>
+        <remote_sink id="b" source="b"/>
+        <remote_sink id="c" source="c"/>
+        <remote_sink id="d" source="d"/>
+
+        <sink id="n1"/>
+        <sink id="n2"/>
+
+        <remote_sink id="e" target="e" />
+
         <function id="f_add1">
             <extend>
                 <method_name>add</method_name>
             </extend>
-            <sources>
-                <slot id="a">
-                    <sink id="a"/>
-                </slot>
-                <slot id="b">
-                    <sink id="b"/>
-                </slot>
-            </sources>
-            <targets>
-                <slot id="c">
-                    <sink id="n1"/>
-                </slot>
-            </targets>
+            <source_map>
+                <map sink='a' slot='a'/>
+                <map sink='b' slot='b'/>
+            </source_map>
+            <target_map>
+                <map sink='n1' slot='c'/>
+            </target_map>
         </function> 
 
         <function id="f_add2">
             <extend>
                 <method_name>add</method_name>
             </extend>
-            <sources>
-                <slot id="a">
-                    <sink id="c"/>
-                </slot>
-                <slot id="b">
-                    <sink id="d"/>
-                </slot>
-            </sources>
-            <targets>
-                <slot id="c">
-                    <sink id="n2"/>
-                </slot>
-            </targets>
+            <source_map>
+                <map sink='c' slot='a'/>
+                <map sink='d' slot='b'/>
+            </source_map>
+            <target_map>
+                <map sink='n2' slot='c'/>
+            </target_map>
         </function> 
 
         <function id="f_add3">
             <extend>
                 <method_name>add</method_name>
             </extend>
-            <sources>
-                <slot id="a">
-                    <sink id="n1"/>
-                </slot>
-                <slot id="b">
-                    <sink id="n2"/>
-                </slot>
-            </sources>
-            <targets>
-                <slot id="c">
-                    <sink id="e"/>
-                </slot>
-            </targets>
+            <source_map>
+                <map sink='n1' slot='a'/>
+                <map sink='n2' slot='b'/>
+            </source_map>
+            <target_map>
+                <map sink='e' slot='c'/>
+            </target_map>
         </function> 
     </impl>
 

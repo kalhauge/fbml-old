@@ -10,42 +10,25 @@ import xml.etree.ElementTree as ET
 class TypeDoesNotExist(exceptions.MallformedFlowError):
     """ TypeDoesNotExist is thrown if a type does not exist"""
 
-class TypeFormat (xmlformat.XMLExtensionFormat):
-    def __init__(self): 
-        self.name = 'type'
+class TypeFormat(object):
+    name = "type"
 
-    def parse_method(self,tree):
-        m = ((x.attrib['slot'],self.parse_type(x)) for x in tree.findall('type'))
-        return dict(m)
+    def parse(self, parser, tree):
+        return Type.new(tree.text)
 
-    def parse_extend(self,tree):
-        m = ((x.attrib['slot'],Type.new(x.text)) for x in tree.findall('type'))
-        return dict(m)
+    def write(self, writer, value, root):
+        ET.SubElement(root,'type').text = value.name
 
-    def parse(self,tag,tree):
-        return self.parse_functions[tag](self,tree)
+class TypesFormat(object):
+    name = "types"
 
-    parse_functions = {
-            'extend' : parse_extend,
-            'require' : parse_method,
-            'ensure' : parse_method
-            }
+    def parse(self, parser, tree):
+        return parser.parse_objects(tree,'type')
 
-    def write(self, tag, req, tree):
-        self.write_functions[tag](self,req,tree) 
-
-    def write_method(self,req,tree):
-        for slot,type_ in req.items():
-            ET.SubElement(tree,'type',{'slot':str(slot)}).text = type_.name()
-
-    def write_extend(self,ext,tree):
-        ET.SubElement(tree,'type').text = ext.name()
-
-    write_functions = {
-            'extend': write_extend,
-            'require': write_method,
-            'ensure': write_method
-            }
+    def write(self, writer, value, root):
+        elm = ET.SubElement(root, 'types')
+        for val in value:
+            writer.write_object(value,root)
 
 def could_be(t,method,i):
     try:
@@ -95,7 +78,7 @@ class Type (object):
 
 class TypeExtension(Extension):
     NAME = "type"
-    XML_FORMAT = TypeFormat()
+    XML_FORMATS = [TypeFormat(), TypesFormat()] 
 
 
 class TypeSetter (visitors.DataFlowVisitor):
@@ -105,7 +88,6 @@ class TypeSetter (visitors.DataFlowVisitor):
         self.module = module
 
     def setup(self,method):
-
         slot_sinks = dict((slot, method.impl.sinks[source_name])
                 for slot, source_name in method.req.sources.items())
 

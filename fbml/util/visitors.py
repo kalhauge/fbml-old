@@ -6,10 +6,10 @@ def calculate_reachable_functions(sinks):
     f_set = set()
     while q:
         sink = q.popleft();
-        if not sink.function in f_set:
+        if not sink.owner in f_set:
             # Sink depend on a function not allready in set
-            f_set.add(sink.function);
-            q.extend(sink for sink in sink.function.sources);
+            f_set.add(sink.owner);
+            q.extend(sink for sink in sink.owner.sources);
         else: sources.append(sink);
 
     return f_set
@@ -29,13 +29,13 @@ class DataFlowVisitor (object):
         if method in self._methods:
             return self._methods[method]
         impl = method.impl
-        runorder = calculate_runorder(impl)
+
+        # Calculates the runorder and then removes the method
+        runorder = calculate_runorder(impl)[1:]
         
         results = self.setup(method);
         for function in runorder:
-            sinks_results = (results[s] for s in function.sources)
-            source_results = self.merge(function,sinks_results)
-            results.update(self.apply(function,source_results))
+            results.update(self.apply(function,results))
         ret_method = self.final(method,results)
         self._methods[method] = ret_method
         return ret_method
@@ -46,15 +46,8 @@ class DataFlowVisitor (object):
         information Sink -> Info
         """
         pass
-    
-    def merge(self,function,sinks):
-        """
-        Recieves the results from sinks to a function and returns the resulting
-        values for the sources for the new function
-        """
-        pass
 
-    def apply(self,function,sources):
+    def apply(self,function,sinks):
         """
         For each function take the sources and retrun the sinks
         the sources are slot oriented. The output sinks should orderd in 
@@ -78,7 +71,7 @@ class ControlFlowVisitor (object):
     def visit(self,method):
         if method in self._methods:
             return method
-        runorder = calculate_runorder(method.impl)
+        runorder = calculate_runorder(method.impl)[1:]
         result = self.setup(method)
         for function in runorder:
             result = self.apply(function,result)

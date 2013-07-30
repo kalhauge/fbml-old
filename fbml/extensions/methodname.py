@@ -3,9 +3,8 @@ from ..parsers import xmlformat
 from ..util import matchers
 
 
-class MethodNameFormat (xmlformat.XMLExtensionFormat):
-    def __init__(self):
-        self.name = 'method_name'
+class MethodNameFormat (object):
+    name = 'method_name'
     
     def parse(self, parser, tree):
         return tree.text
@@ -30,6 +29,6 @@ def get_method_name(function):
 
 
 class MethodNameExtension (Extension):
-    XML_FORMAT = MethodNameFormat()
+    XML_FORMATS = [MethodNameFormat()]
     NAME = 'method_name'
 

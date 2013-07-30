@@ -24,7 +24,6 @@ def get_extensions(names):
     in args
     """
     from .extensions import named_extensions 
-    from .parsers.xmlformat import XMLExtensionFormats
     return [named_extensions[a] for a in names]
 
 def root_from_environment(paths=None):
@@ -72,7 +71,7 @@ def import_module(modulename,extension=None,paths=None):
 
 def save_module(module,filelike,extensions):
     from .parsers import xmlformat
-    extends = get_extensions(extensions + ['sources','sinks'])
+    extends = get_extensions(extensions)
     return xmlformat.XMLWriter(extends).write(module,filelike)
     
 setup()

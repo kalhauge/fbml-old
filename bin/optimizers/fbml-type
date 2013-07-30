@@ -23,17 +23,16 @@ def main(args):
 
     module = builder.label_from_string(args.modulename).get()
 
-    def type_methods(method):
-        if 'type' in method.ens.get_all(): return method;
-        return typeext.TypeSetter(module).visit(method)
+    #def type_methods(method):
+    #    return typeext.TypeSetter(module).visit(method)
 
-
-    methods = [type_methods(method) for method in module.methods]
+    #methods = [type_methods(method) for method in module.methods]
     
     fbml.save_module(
             module,
             sys.stdout if not args.output else args.output,
             used_extensions)
+
     return 0
 
 def parse_args():

@@ -23,16 +23,11 @@ class Extension (object):
     def tuble(self):
         return (self.name(),self)
 
-
-
-from . import type, methodname, sources, sinks, llvm
-
+from . import type, methodname,  llvm
 
 extensions = [
         type.TypeExtension(), 
         methodname.MethodNameExtension(),
-        sources.SourcesExtension(),
-        sinks.SinksExtension(),
         llvm.LLVMExtension(),
         ] 
 

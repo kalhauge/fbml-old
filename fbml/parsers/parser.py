@@ -91,11 +91,18 @@ class Function(ParseObject):
     def set_sources(self,seq):
         self.sources = list(seq)
 
+
 class Sink(ParseObject):
+    def requried_attributes(self): return ['id']
+
+class RemoteSink(ParseObject):
     def requried_attributes(self): return ['id']
 
 class Slot(ParseObject):
     def requried_attributes(self): return ['id']
+
+class Map(ParseObject):
+    def requried_attributes(self): return ['slot', 'sink']
 
 class Extends(ParseObject):
     def requried_attributes(self): return []

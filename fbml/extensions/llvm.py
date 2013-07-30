@@ -12,7 +12,7 @@ import llvm.core as llvmc
 import llvm.ee as llvmee
 
 
-class LLVMFormat(xmlformat.XMLExtensionFormat):
+class LLVMFormat(object):
 
     def __init__(self):
         self.setName('LLVM')

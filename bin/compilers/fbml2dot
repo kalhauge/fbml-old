@@ -32,13 +32,6 @@ def method_to_dot(method, filelike):
     filelike.write("digraph {\n")
     filelike.write( "  node [shape=record,style=rounded,height=0.1];\n")
     filelike.write('  ' + '\n  '.join(DotVisitor().visit(method)) + "\n")
-
-    for sink in method.targets:
-        filelike.write('  OUT_{} [label = "{}"];\n'.format(
-                id_(sink),id_(sink)))
-        filelike.write('  "{}":{} -> "OUT_{}";\n'.format(
-                id_(sink.function),
-                id_(sink),id_(sink)))
     filelike.write("}\n")
 
 class DotVisitor (fbml.ControlFlowVisitor):
@@ -50,32 +43,40 @@ class DotVisitor (fbml.ControlFlowVisitor):
         """
         Setup initializes the list of lines which everythis is appended to
         """
-        dotlines = [] 
+        dotlines = []
+        dotlines.append('"{}" [label="{}"]'.format(
+                id_(method),
+                self.function_to_dot_label(
+                    [],
+                    method.sources,
+                    method.req.method_name,
+                    )
+                )
+            )
         return dotlines 
 
-    def final(self,method,dotlines): 
+    def final(self,method,dotlines):
+        for sink in method.targets:
+            dotlines.append('OUT_{} [label = "{}"];'.format(
+                id_(sink),id_(sink)))
+            dotlines.append('"{}":{} -> "OUT_{}";'.format(
+                id_(sink.owner), id_(sink), id_(sink)))
         return dotlines
 
     def apply(self,function,dotlines):
-        
-        in_str = "|".join(["<{}>".format(id_(s)) 
-                        for s in function.sources]);
-        out_str = "|".join(["<{}>".format(id_(s))
-                        for s in function.targets]);
-        function_str= '{} [label="{{{}}}"];'.format(
+        function_str= '{} [label="{}"];'.format(
             function.label.name,
-            '{} {} {}'.format(
-               '{{{}}} |'.format(in_str) if not in_str is '' else '',
-               function.ext.method_name,
-
-               '| {{{}}}'.format(out_str) if not out_str is '' else '',
-               )
+            self.function_to_dot_label(
+                function.sources, 
+                function.targets,
+                function.ext.method_name
+                )
             )
         
         connections = []
         for sink in function.sources:
             con = '"{}":{} -> "{}":{};'.format(
-                    id_(sink.function),
+                    id_(sink.owner),
                     id_(sink),
                     id_(function),
                     id_(sink)
@@ -85,6 +86,21 @@ class DotVisitor (fbml.ControlFlowVisitor):
         dotlines.extend(connections)
 
         return dotlines
+
+    def function_to_dot_label(self, sources, targets, method_name):
+        in_str  = "|".join(["<{s_id}> {s_id}".format(s_id=id_(s)) 
+            for s in sorted(sources,key=id_)]);
+        out_str = "|".join(["<{s_id}> {s_id}".format(s_id=id_(s)) 
+            for s in sorted(targets,key=id_)]);
+
+        in_label = '{{{}}} |'.format(in_str) if sources else ''
+        out_label = '| {{{}}}'.format(out_str) if targets else ''
+
+        label =' '.join(str(x) for x in ['{',in_label, method_name, out_label,'}'])
+
+        return label
+        
+
         
 def parse_args():
     import argparse

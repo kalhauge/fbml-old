@@ -12,6 +12,7 @@ setup(
     long_description=open('README.rst').read(),
     scripts=[
         'bin/compilers/fbml2dot',
+        'bin/compilers/fbml2fbml',
         'bin/compilers/fbml2llvm',
         'bin/optimizers/fbml-type'
         ],

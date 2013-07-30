@@ -64,35 +64,35 @@ class Builder (object):
 
     def build_impl(self, label, tree):
         impl = model.Impl(label)
-        for slot, sink in impl.method.req.sources.items():
-            impl.make_function('f_load_' + str(slot),self.build_load_function(sink))
-        functions = []
-        for fun in tree.functions:
-            functions.append(
-                    impl.make_function(fun.id,self.factory(fun,'function'))
-                    )
-        for function, tree in zip(functions,tree.functions):
-            for slot, sink in tree.sources.items():
-                function.add_source(slot, impl.sinks[sink.id])
+        for sink in tree.sinks:
+            impl.make_sink(sink.id,self.factory(sink,'sink'))
+        for remote_sink in tree.remote_sinks:
+            impl.make_sink(remote_sink.id,self.factory(remote_sink,'remote_sink'))
+        for function in tree.functions:
+            impl.make_function(function.id,self.factory(function,'function'))
         return impl
-
-    def build_load_function(self, sink_tree):
-        def factory(label):
-            function = model.Function(label)
-            function.ext.method_name = sink_tree.id
-            sink = function.make_target('output', sink_tree.id, model.Sink)
-            return function
-        return factory
 
     def build_function(self, label, tree):
         function = model.Function(label)
-        for slot, sink in tree.sinks.items():
-            function.make_target(slot, sink.id, self.factory(sink,'sink')) 
+        for slot, name in tree.sources.items():
+            sink = function.impl.sinks[name]
+            function.make_source(slot,sink)
+        for slot, name in tree.targets.items():
+            function.make_target(slot,function.impl.sinks[name])
         self.assing_extends(tree,function)
         return function
-   
-    def build_sink(self, label, target, tree):
-        sink = model.Sink(label,target)
+
+    def build_remote_sink(self, label, tree):
+        sink = model.Sink(label)
+        method = sink.impl.method
+        if hasattr(tree,'source'):
+            label.parrent.method.make_source(tree.source,sink)
+        if hasattr(tree,'target'):
+            label.parrent.method.make_target(tree.target,sink)
+        return sink
+
+    def build_sink(self, label, tree):
+        sink = model.Sink(label)
         self.assing_extends(tree, sink)
         return sink
 
