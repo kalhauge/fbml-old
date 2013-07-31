@@ -60,8 +60,13 @@ class Method (Namespace):
     The Method is the descriptor of the functions of the program. It describes
     in what method that the function will be run.
 
-    :param label: The label of the method
+    The Method can contain an implementaions. 
 
+    :param label: The label of the method
+    :param requirments: The requirments for the method. These describes 
+        the required features to run the program
+    :param ensurances: The ensurances for the mehtod. These describes the
+        effect of running the method.
     """
 
     def __init__(self, label, requirements, ensurances):
@@ -79,14 +84,14 @@ class Method (Namespace):
         return self.find('impl')
 
     def make_target(self, slot, sink):
-        res = self.make('target_'+slot, sink.add_user)
+        res = self.make(slot, sink.add_user)
         for name, data in vars(self.ens.targets[slot].extends).items():
             sink.ext.set(name,data)
         self.targets.append(res)
         return res
     
     def make_source(self, slot, sink):
-        res = self.make('source_'+str(slot),sink.set_target) 
+        res = self.make(slot,sink.set_target) 
         for name, data in vars(self.req.sources[slot].extends).items():
             sink.ext.set(name,data)
         self.sources.append(res)
@@ -121,30 +126,26 @@ class Function (Namespace, Extendable):
     def __init__(self, label):
         super(Function, self).__init__(label)
         Extendable.__init__(self)
-        self.source_slots = dict() 
-        self.slot_targets = dict()
+        self.source_labels = list() 
+        self.target_labels = list()
 
     def make_target(self, slot, sink):
-        res = self.make('o_'+str(slot), sink.set_target)
-        self.slot_targets[slot] = res
+        def set_target(label):
+            sink.set_target(label)
+            self.target_labels.append(label)
+        res = self.make(slot, set_target)
         return res
     
     def make_source(self, slot, sink):
-        res = self.make('i_'+str(slot),sink.add_user) 
-        self.source_slots[res] = slot
+        def add_user(label):
+            sink.add_user(label)
+            self.source_labels.append(label)
+        res = self.make(slot, add_user) 
         return res
 
     @property
     def impl(self):
         return self.label.parrent
-
-    @property
-    def sources(self):
-        return self.source_slots.keys()
-   
-    @property
-    def targets(self):
-        return self.slot_targets.values()
 
     def __repr__(self):
         return '<function label={f.label}>'.format(f=self)
@@ -170,7 +171,10 @@ class Sink (Extendable):
 
     @property
     def slot(self):
-        return self.target.name.split('_',1)[1]
+        return self.target.name
+
+    def user_slot(self, user):
+        return self._users[user].name
 
     @property
     def owner(self):
@@ -180,12 +184,12 @@ class Sink (Extendable):
         return self.is_method_source() or self.is_method_target()
 
     def is_method_target(self):
-        return any(isinstance(user.parrent,Method) for user in self.users)
+        return any(isinstance(user,Method) for user in self.users)
 
     @property
     def method_target(self):
-        return [user.name.split('_',1)[1] 
-                for user in self.users if isinstance(user.parrent,Method)][0]
+        return [self.user_slot(user)
+                for user in self.users if isinstance(user,Method)][0]
 
     def is_method_source(self):
         return isinstance(self.owner, Method)

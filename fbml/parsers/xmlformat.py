@@ -41,8 +41,10 @@ def write_function(writer, value, root):
     func = ET.SubElement(root, 'function')
     func.set('id', value.label.name)
     writer.write_object('extend',value.ext, func)
-    writer.write_object('source_map',value.source_slots.items(), func)
-    writer.write_object('target_map',((t,s) for s,t in value.slot_targets.items()), func)
+    source_map = ((sink, sink.user_slot(value)) for sink in value.sources)
+    writer.write_object('source_map',source_map, func)
+    target_map = ((sink, sink.slot) for sink in value.targets)
+    writer.write_object('target_map',target_map, func)
 
 def write_sources(writer, value, root):
     srcs = ET.SubElement(root, 'sources')
