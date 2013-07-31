@@ -40,7 +40,7 @@ def check(function):
 
 def could_be(type_,method,slot):
     try:
-        return type_ == method.req.sources[slot].extends.type
+        return type_ == method.req.slots[slot].type
     except KeyError:
         return False
 
@@ -88,17 +88,14 @@ class TypeSetter (visitors.DataFlowVisitor):
         self.module = module
 
     def setup(self,method):
-        return ((sink, sink.ext.type) for sink in method.sources)
+        return ((sink, sink.data.type) for sink in method.impl.source_sinks)
 
     def apply(self,function,sink_types):
-        types = [(sink.user_slot(function), type_) 
-                    for sink, type_ in sink_types.items() 
-                    if sink in function.sources]
 
-        types = [ (sink.user_slot(function), sink_types[sink]) 
-                    for sink in function.sources]
+        types = [(slot, sink_types[sink]) 
+                for slot, sink in function.sources.with_names]
 
-        method_name = function.ext.method_name
+        method_name = function.data.method_name
         
         from .methodname import has_method_name
         from ..util.matchers import has_targets, has_sources
@@ -108,18 +105,22 @@ class TypeSetter (visitors.DataFlowVisitor):
                 matchers.all_of(
                     has_types(types),
                     has_method_name(method_name),
-                    has_sources(sink.user_slot(function) for sink in function.sources),
-                    has_targets(sink.slot for sink in function.targets)
+                    has_sources(function.sources.names),
+                    has_targets(function.targets.names)
                     )
                 )
 
-        for sink in function.targets:
-            sink.ext.type = method.ens.targets[sink.slot].extends.type
-            yield sink, sink.ext.type
+        for slot, sink in function.targets.with_names:
+            try:
+                sink.data.type = method.ens.slots[slot].type
+            except AttributeError:
+                self.visit(method)
+                sink.data.type = method.ens.slots[slot].type
+            yield sink, sink.data.type
 
     def final(self,method,sink_types):
-        for sink in method.targets:
-            method.ens.targets[sink.user_slot(method)].extends.type = sink.ext.type
+        for slot, sink in method.impl.target_sinks.with_names:
+            method.ens.slots[slot].type = sink.data.type
         
         return method
 

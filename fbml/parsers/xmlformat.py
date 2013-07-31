@@ -51,7 +51,7 @@ def write_slot(writer, value, root):
 def write_sink(writer, value, root):
     sink = ET.SubElement(root, 'sink')
     sink.set('id', value.label.name)
-    writer.write_object('data',value.data,root)
+    writer.write_object('data',value.data,sink)
 
 def write_import(writer, value, root):
     ET.SubElement(root,'import').text = repr(value.label)

@@ -23,7 +23,7 @@ class has_sources(Matcher):
         self._matcher = hc.contains_inanyorder(*self._slots)
 
     def _matches(self, method):
-        return self._matcher.matches(method.req.sources)
+        return self._matcher.matches(method.req.slots.names)
 
     def describe_to(self,description):
         description.append("sources with slots satisfying ( ")
@@ -37,7 +37,7 @@ class has_targets(Matcher):
         self._matcher = hc.contains_inanyorder(*self._slots)
 
     def _matches(self, method):
-        return self._matcher.matches(method.ens.targets)
+        return self._matcher.matches(method.ens.slots.names)
        
     def describe_to(self,description):
         description.append("targets with slots satisfying ( ")

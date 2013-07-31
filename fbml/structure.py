@@ -125,6 +125,10 @@ class Namespace (object):
     @property
     def with_names(self):
         return iter(self.children.items())
+    
+    @property
+    def names(self):
+        return iter(self.children)
 
     def __getitem__(self,name):
         return self.find_from_name_list(name.split('.'))

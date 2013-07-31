@@ -19,7 +19,7 @@ class has_method_name (matchers.Matcher):
         self._method_name = method_name
 
     def _matches(self,method):
-        return method.req.method_name == self._method_name 
+        return method.req.data.method_name == self._method_name 
 
     def describe_to(self,description):
         description.append('has method name of "')
