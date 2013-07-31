@@ -6,7 +6,7 @@
         <!-- MultiAdd(a,b,c,d) : (a+b) + (c+d) -->
         <require>
             <method_name>multi_add</method_name>
-            <sources>
+            <slots>
                 <slot id="a">
                     <type>Integer</type>
                 </slot>
@@ -19,12 +19,12 @@
                 <slot id="d">
                     <type>Integer</type>
                 </slot>
-            </sources>
+            </slots>
         </require>
         <ensure>
-            <targets>
+            <slots>
                 <slot id="e"/>
-            </targets>
+            </slots>
         </ensure>
     </method>
 
@@ -42,77 +42,69 @@
         <remote_sink id="e" target="e" />
 
         <function id="f_add1">
-            <extend>
-                <method_name>add</method_name>
-            </extend>
-            <source_map>
+            <method_name>add</method_name>
+            <sources>
                 <map sink='a' slot='a'/>
                 <map sink='b' slot='b'/>
-            </source_map>
-            <target_map>
+            </sources>
+            <targets>
                 <map sink='n1' slot='c'/>
-            </target_map>
+            </targets>
         </function> 
 
         <function id="f_add2">
-            <extend>
-                <method_name>add</method_name>
-            </extend>
-            <source_map>
+            <method_name>add</method_name>
+            <sources>
                 <map sink='c' slot='a'/>
                 <map sink='d' slot='b'/>
-            </source_map>
-            <target_map>
+            </sources>
+            <targets>
                 <map sink='n2' slot='c'/>
-            </target_map>
+            </targets>
         </function> 
 
         <function id="f_add3">
-            <extend>
-                <method_name>add</method_name>
-            </extend>
-            <source_map>
+            <method_name>add</method_name>
+            <sources>
                 <map sink='n1' slot='a'/>
                 <map sink='n2' slot='b'/>
-            </source_map>
-            <target_map>
+            </sources>
+            <targets>
                 <map sink='e' slot='c'/>
-            </target_map>
+            </targets>
         </function> 
     </impl>
 
     <method id="multiply-with-four">
         <require>
             <method_name>multiply_with_four</method_name>
-            <sources>
+            <slots>
                 <slot id='in'>
                     <type>Integer</type>
                 </slot>
-            </sources>
+            </slots>
         </require>
         <ensure>
-            <targets>
+            <slots>
                 <slot id='out'/>
-            </targets>
+            </slots>
         </ensure>
     </method>
 
     <impl method_id="multiply-with-four">
         <remote_sink id='a' source='in' />
-        <remote_sink id='b' targets='out' />
+        <remote_sink id='b' target='out' />
         <function id="f_1">
-            <extend>
-                <method_name>multi_add</method_name>
-            </extend>
-            <source_map>
+            <method_name>multi_add</method_name>
+            <sources>
                 <map sink='a' slot='a'/>
                 <map sink='a' slot='b'/>
                 <map sink='a' slot='c'/>
                 <map sink='a' slot='d'/>
-            </source_map>  
-            <target_map>
+            </sources>  
+            <targets>
                 <map sink='b' slot='e'/>
-            </target_map>
+            </targets>
         </function>
     </impl>
 </fbml>

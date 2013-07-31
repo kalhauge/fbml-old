@@ -161,90 +161,67 @@ class XMLWriter (object):
         for value in values:
             self.write_object(name, value, root)
 
-def module_format(parser, tree):
+def parse_module(parser, tree):
     module = Module(**tree.attrib)
     module.imports = parser.parse_objects(tree, 'import')
     module.methods = parser.parse_objects(tree, 'method')
     module.impls   = parser.parse_objects(tree, 'impl')
     return module
 
-def import_format(parser, tree):
-    return tree.text
-
-def method_format(parser, tree):
-    method = Method(**tree.attrib)
-    parser.parse_subobject(method, tree.find('require'))
-    parser.parse_subobject(method, tree.find('ensure'))
-    return method
-
-def impl_format(parser, tree):
+def parse_impl(parser, tree):
     impl = Impl(**tree.attrib)
     impl.functions = parser.parse_objects( tree, 'function')
     impl.sinks = parser.parse_objects( tree, 'sink')
     impl.remote_sinks = parser.parse_objects( tree, 'remote_sink')
     return impl
 
-def function_format(parser, tree):
-    function = Function(**tree.attrib)
-    function.extends = parser.parse_object_from_name(tree,'extend')
-    function.sources = parser.parse_object_from_name(tree,'source_map')
-    function.targets = parser.parse_object_from_name(tree,'target_map')
-    return function
+def parse_ext_object(cls,required):
+    def parse_obj(parser,tree):
+        obj = cls(**tree.attrib)
+        for name in required:
+            setattr(obj,name,parser.parse_object_from_name(tree, name))
+        obj.data = Data()
+        parser.parse_rest(tree,obj.data,required)
+        return obj
+    return parse_obj
 
-def slot_dict_format(parser, tree):
-    objects = (parser.parse_object(subtree) for subtree in tree.findall('slot'))
-    return dict((obj.id, obj) for obj in objects)
+def parse_object(cls, subtags):
+    def parse_obj(parser,tree):
+        obj = cls(**tree.attrib)
+        for name in subtags:
+            setattr(obj,name,parser.parse_object_from_name(tree, name))
+        return obj
+    return parse_obj
 
-def map_dict_format(parser, tree):
-    objects = (parser.parse_object(subtree) for subtree in tree.findall('map'))
-    return dict((obj.slot, obj.sink) for obj in objects)
 
-def map_format(parser, tree):
-    return Map(**tree.attrib)
+def parse_list(subtag):
+    def parse(parser, tree):
+       return list(parser.parse_objects(tree,subtag))
+    return parse
 
-def extend_format(parser, tree):
-    extends = Extends()
-    parser.parse_subobjects(extends,tree)
-    return extends
+def parse_text(parser, tree):
+    return tree.text
 
-def sink_format(parser, tree):
-    sink = Sink(**tree.attrib)
-    sink.extends = Extends();
-    parser.parse_subobjects(sink.extends,tree)
-    return sink
-
-def slot_format(parser, tree):
-    slot = Slot(**tree.attrib)
-    slot.extends = Extends()
-    parser.parse_subobjects(slot.extends,tree)
-    return slot
-
-def remote_sink_format(parser, tree):
-    sink = RemoteSink(**tree.attrib)
-    return sink
-
-def std_format(parser, tree):
+def parse_std(parser, tree):
     log.debug("Parsing unknown %s",tree)
     return tree
 
 class XMLParser (object):
     _std_formats = {
-            'fbml'         : module_format,
-            'import'       : import_format,
-            'method'       : method_format,
-            'impl'         : impl_format,
-            'function'     : function_format,
-            'targets'      : slot_dict_format,
-            'sources'      : slot_dict_format,
-            'source_map'   : map_dict_format,
-            'target_map'   : map_dict_format,
-            'map'          : map_format,
-            'require'      : extend_format,
-            'ensure'       : extend_format,
-            'extend'       : extend_format,
-            'sink'         : sink_format,
-            'slot'         : slot_format,
-            'remote_sink'  : remote_sink_format,
+            'fbml'         : parse_module,
+            'impl'         : parse_impl,
+            'method'       : parse_object(Method,['require', 'ensure']),
+            'function'     : parse_ext_object(Function,['sources','targets']),
+            'require'      : parse_ext_object(Condition,['slots']),
+            'ensure'       : parse_ext_object(Condition,['slots']),
+            'sink'         : parse_ext_object(Sink,[]),
+            'slot'         : parse_ext_object(Slot,[]),
+            'remote_sink'  : parse_object(RemoteSink,[]),
+            'map'          : parse_object(Map,[]),
+            'targets'      : parse_list('map'),
+            'sources'      : parse_list('map'),
+            'slots'        : parse_list('slot'),
+            'import'       : parse_text,
             }
 
     def __init__(self,extend_formats):
@@ -270,6 +247,10 @@ class XMLParser (object):
         for subtree in tree:
             self.parse_subobject(parrent, subtree)
 
+    def parse_rest(self, tree, parrent, do_not_load):
+        for subtree in tree:
+            if not subtree.tag in do_not_load:
+                self.parse_subobject(parrent, subtree)
 
     def parse_object_from_name(self, tree, name):
         subtree = tree.find(name)
@@ -282,6 +263,6 @@ class XMLParser (object):
         if tree is None:
             raise exceptions.MallformedFlowError(
                     'Missed to parse an object: {} {}'.format(tree, name))
-        return self.formats.get(tree.tag,std_format)(self,tree)
+        return self.formats.get(tree.tag,parse_std)(self,tree)
 
 

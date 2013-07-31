@@ -1,2 +1,1 @@
-
-.. automodule:: pyfbml.dataflow.model
+.. automodule:: fbml.model

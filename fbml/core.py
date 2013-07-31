@@ -59,50 +59,70 @@ class Builder (object):
         for method in module_tree.methods:
             module.make_method(method.id,self.factory(method,'method'))
         for impl in module_tree.impls:
-            method = module.find(impl.method_id)
+            method = module[impl.method_id]
             method.make_impl(self.factory(impl,'impl'))
         return module
 
     def build_method(self, label, tree):
-        return model.Method(label, tree.require, tree.ensure)
+        method = model.Method(label)
+        method.make_condition('req',self.factory(tree.require,'condition'))
+        method.make_condition('ens',self.factory(tree.ensure,'condition'))
+        return method
+    
+    def build_condition(self, label, tree):
+        condition = model.Condition(label)
+        for slot in tree.slots:
+            condition.make_slot(slot.id, 
+                    lambda label: self.assing_extends(slot,model.Data()))
+        self.assing_extends(tree,condition.data)
+        return condition
 
     def build_impl(self, label, tree):
         impl = model.Impl(label)
         for sink in tree.sinks:
             impl.make_sink(sink.id,self.factory(sink,'sink'))
-        for remote_sink in tree.remote_sinks:
-            impl.make_sink(remote_sink.id,self.factory(remote_sink,'remote_sink'))
+        for remote in tree.remote_sinks:
+            if hasattr(remote,'target'):
+                remote.slot = remote.target
+                impl.make_target_sink(remote.id,remote.slot,self.factory(remote,'target_sink'))
+            elif hasattr(remote, 'source'):
+                remote.slot = remote.source
+                impl.make_source_sink(remote.id,remote.slot, self.factory(remote,'source_sink'))
         for function in tree.functions:
             impl.make_function(function.id,self.factory(function,'function'))
         return impl
 
     def build_function(self, label, tree):
         function = model.Function(label)
-        for slot, name in tree.sources.items():
-            sink = function.impl.sinks[name]
-            function.make_source(slot,sink)
-        for slot, name in tree.targets.items():
-            function.make_target(slot,function.impl.sinks[name])
-        self.assing_extends(tree,function)
+        for map_ in tree.sources:
+            sink = function.impl.sinks[map_.sink]
+            function.make_source(map_.slot,function.impl.sinks[map_.sink])
+        for map_ in tree.targets:
+            function.make_target(map_.slot,function.impl.sinks[map_.sink])
+        self.assing_extends(tree,function.data)
         return function
 
-    def build_remote_sink(self, label, tree):
+    def build_target_sink(self, target_label, label, tree):
         sink = model.Sink(label)
-        method = sink.impl.method
-        if hasattr(tree,'source'):
-            label.parrent.method.make_source(tree.source,sink)
-        if hasattr(tree,'target'):
-            label.parrent.method.make_target(tree.target,sink)
+        sink.data = sink.impl.method.ens.slots[tree.slot]
         return sink
+
+    def build_source_sink(self, source_label, label, tree):
+        sink = model.Sink(label)
+        sink.data = sink.impl.method.req.slots[tree.slot]
+        sink.target = source_label 
+        return sink
+
 
     def build_sink(self, label, tree):
         sink = model.Sink(label)
-        self.assing_extends(tree, sink)
+        self.assing_extends(tree, sink.data)
         return sink
 
     def factory(self, tree, name):
         return partial(getattr(self,'build_'+name),tree = tree)
 
     def assing_extends(self, tree, obj):
-        for name, data in vars(tree.extends).items():
-            obj.ext.set(name,data) 
+        for name, data in vars(tree.data).items():
+            setattr(obj,name,data)
+        return obj

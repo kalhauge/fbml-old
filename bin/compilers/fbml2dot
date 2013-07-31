@@ -41,18 +41,18 @@ class DotVisitor (fbml.ControlFlowVisitor):
         """
         dotlines = []
         dotlines.append('"{}" [label="{}"]'.format(
-                id_(method),
+                id_(method.impl),
                 self.function_to_dot_label(
                     [],
-                    method.sources,
-                    method.req.method_name,
+                    method.impl.source_sinks,
+                    method.req.data.method_name,
                     )
                 )
             )
         return dotlines 
 
     def final(self,method,dotlines):
-        for sink in method.targets:
+        for sink in method.impl.target_sinks:
             dotlines.append('OUT_{} [label = "{}"];'.format(
                 id_(sink),id_(sink)))
             dotlines.append('"{}":{} -> "OUT_{}";'.format(
@@ -65,7 +65,7 @@ class DotVisitor (fbml.ControlFlowVisitor):
             self.function_to_dot_label(
                 function.sources, 
                 function.targets,
-                function.ext.method_name
+                function.data.method_name
                 )
             )
         
@@ -85,9 +85,9 @@ class DotVisitor (fbml.ControlFlowVisitor):
 
     def function_to_dot_label(self, sources, targets, method_name):
         in_str  = "|".join(["<{s_id}> {s_id}".format(s_id=id_(s)) 
-            for s in sorted(sources,key=id_)]);
+            for s in sorted(list(sources),key=id_)]);
         out_str = "|".join(["<{s_id}> {s_id}".format(s_id=id_(s)) 
-            for s in sorted(targets,key=id_)]);
+            for s in sorted(list(targets),key=id_)]);
 
         in_label = '{{{}}} |'.format(in_str) if sources else ''
         out_label = '| {{{}}}'.format(out_str) if targets else ''

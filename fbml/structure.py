@@ -63,6 +63,10 @@ class Namespace (object):
     label = readonly('_label')
 
     @property
+    def parrent(self):
+        return self.label.parrent
+
+    @property
     def children(self):
         return dict(self._children)
 
@@ -84,7 +88,7 @@ class Namespace (object):
     def find(self, name):
         """
         Returns a local attribute from a name.
-        :param name: the name of the attribute, that is seeked
+        :param name: the name of the attribute
         """
         return self.children[name]
 
@@ -118,8 +122,15 @@ class Namespace (object):
         self._children[child_label.name] = child_factory(child_label)
         return child_label.get() 
 
+    def __getitem__(self,name):
+        return self.find_from_name_list(name.split('.'))
 
-         
+    def __iter__(self):
+        return iter(self.children.values())
+
+    def __repr__(self):
+        return repr(self.label)
+
 class Package (Namespace):
     """
     Package is the core of the package system. A package unless if

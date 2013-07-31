@@ -44,53 +44,29 @@ class ParseObject(object):
         return vals
 
     def __repr__(self):
-        return str_format(self,'')
-
-def public_list(name):
-    def setter(self, seq):
-        setattr(self,name,list(seq))
-        return self
-    return property(lambda self: getattr(self,name),setter)
+        return self.__class__.__name__ # str_format(self,'')
 
 
+class Data(ParseObject):
+    def requried_attributes(self): return []
 class Module(ParseObject):
 
     def requried_attributes(self): return ['version']
-
-    imports    = public_list('_imports')
-    extensions = public_list('_extensions') 
-    methods    = public_list('_methods')
-    impls      = public_list('_impls')
 
 class Method(ParseObject): 
 
     def requried_attributes(self): return ['id']
 
-    def set_requirements(self,seq):
-        self.requirements = list(seq)
-
-    def set_ensurances(self,seq):
-        self.ensurances = list(seq)
-
-
 class Impl(ParseObject):
 
     def requried_attributes(self): return ['method_id']
 
-    def set_functions(self,seq):
-        self.functions = list(seq)
-
-
 class Function(ParseObject):
    
     def requried_attributes(self): return ['id']
-    
-    def set_sinks(self,seq):
-        self.sinks = list(seq)
 
-    def set_sources(self,seq):
-        self.sources = list(seq)
-
+class Condition(ParseObject):
+    def requried_attributes(self): return []
 
 class Sink(ParseObject):
     def requried_attributes(self): return ['id']

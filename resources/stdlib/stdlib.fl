@@ -4,7 +4,7 @@
     <method id="add-integer">
         <require>
             <method_name>add</method_name>
-            <sources>
+            <slots>
                 <slot id="a">
                     <type>Integer</type>
                     <llvm_arg>0</llvm_arg>
@@ -13,14 +13,14 @@
                     <type>Integer</type>
                     <llvm_arg>1</llvm_arg>
                 </slot>
-            </sources> 
+            </slots> 
         </require>
         <ensure>  
-            <targets>
+            <slots>
                 <slot id="c">
                     <type>Integer</type>
                 </slot>
-            </targets>
+            </slots>
             <llvm>add</llvm>
         </ensure>
     </method>
@@ -28,7 +28,7 @@
     <method id="add-real">
         <require>
             <method_name>add</method_name>
-            <sources>
+            <slots>
                 <slot id="a">
                     <type>Real</type>
                     <llvm_arg>0</llvm_arg>
@@ -37,14 +37,14 @@
                     <type>Real</type>
                     <llvm_arg>1</llvm_arg>
                 </slot>
-            </sources> 
+            </slots> 
         </require>
         <ensure>  
-            <targets>
+            <slots>
                 <slot id="c">
                     <type>Real</type>
                 </slot>
-            </targets>
+            </slots>
             <llvm>add</llvm>
         </ensure>
     </method>
@@ -52,7 +52,7 @@
     <method id="sub-integer">
         <require>
             <method_name>sub</method_name>
-            <sources>
+            <slots>
                 <slot id="a">
                     <type>Integer</type>
                     <llvm_arg>0</llvm_arg>
@@ -61,14 +61,14 @@
                     <type>Integer</type>
                     <llvm_arg>1</llvm_arg>
                 </slot>
-            </sources> 
+            </slots> 
         </require>
         <ensure>  
-            <targets>
+            <slots>
                 <slot id="c">
                     <type>Integer</type>
                 </slot>
-            </targets>
+            </slots>
             <llvm>sub</llvm>
         </ensure>
     </method>

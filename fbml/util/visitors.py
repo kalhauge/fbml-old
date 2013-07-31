@@ -1,23 +1,20 @@
 
-def calculate_reachable_functions(sinks):
+def calculate_reachable_functions(impl):
     from collections import deque 
-    sources = []
-    q = deque(sinks);
-    f_set = set()
+    q = deque(impl.target_sinks);
+    f_set = {impl}
     while q:
         sink = q.popleft();
         if not sink.owner in f_set:
             # Sink depend on a function not allready in set
             f_set.add(sink.owner);
             q.extend(sink for sink in sink.owner.sources);
-        else: sources.append(sink);
-
+    f_set.remove(impl)
     return f_set
 
 def calculate_runorder(impl):
-    f_set = calculate_reachable_functions(impl.method.targets)
-    helper = dict()
-    return sorted(f_set,key=lambda a : a.depth(helper));        
+    f_set = calculate_reachable_functions(impl)
+    return sorted(f_set,key=lambda a : a.depth(dict()));        
 
 
 class DataFlowVisitor (object):
@@ -31,7 +28,7 @@ class DataFlowVisitor (object):
         impl = method.impl
 
         # Calculates the runorder and then removes the method
-        runorder = calculate_runorder(impl)[1:]
+        runorder = calculate_runorder(impl)
         
         results = dict(self.setup(method))
         for function in runorder:
@@ -71,7 +68,7 @@ class ControlFlowVisitor (object):
     def visit(self,method):
         if method in self._methods:
             return method
-        runorder = calculate_runorder(method.impl)[1:]
+        runorder = calculate_runorder(method.impl)
         result = self.setup(method)
         for function in runorder:
             result = self.apply(function,result)
