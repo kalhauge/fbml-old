@@ -122,6 +122,10 @@ class Namespace (object):
         self._children[child_label.name] = child_factory(child_label)
         return child_label.get() 
 
+    @property
+    def with_names(self):
+        return iter(self.children.items())
+
     def __getitem__(self,name):
         return self.find_from_name_list(name.split('.'))
 

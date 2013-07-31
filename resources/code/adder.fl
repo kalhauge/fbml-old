@@ -31,15 +31,15 @@
 
     <impl method_id="multi-add">
 
-        <remote_sink id="a" source="a"/>
-        <remote_sink id="b" source="b"/>
-        <remote_sink id="c" source="c"/>
-        <remote_sink id="d" source="d"/>
+        <source id="a" slot="a"/>
+        <source id="b" slot="b"/>
+        <source id="c" slot="c"/>
+        <source id="d" slot="d"/>
 
         <sink id="n1"/>
         <sink id="n2"/>
 
-        <remote_sink id="e" target="e" />
+        <target id="e" slot="e" />
 
         <function id="f_add1">
             <method_name>add</method_name>
@@ -92,8 +92,8 @@
     </method>
 
     <impl method_id="multiply-with-four">
-        <remote_sink id='a' source='in' />
-        <remote_sink id='b' target='out' />
+        <source id='a' slot='in' />
+        <target id='b' slot='out' />
         <function id="f_1">
             <method_name>multi_add</method_name>
             <sources>

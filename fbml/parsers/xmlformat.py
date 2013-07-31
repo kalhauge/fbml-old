@@ -29,73 +29,63 @@ def write_impl(writer, value, root):
     impl = ET.SubElement(root, 'impl')
     impl.set('method_id',value.method.label.name)
 
-    is_remote = [sink.is_remote_sink() for sink in value.sinks.values()]
-    remote_sinks = compress(value.sinks.values(),is_remote)
-    local_sinks  = compress(value.sinks.values(),map(not_,is_remote))
+    remote_sinks = set(value.target_sinks) | set(value.source_sinks) 
 
-    writer.write_objects('function',value.functions.values(), impl)
-    writer.write_objects('sink',local_sinks, impl)
-    writer.write_objects('remote_sink',remote_sinks, impl)
+    writer.write_objects('function',value.functions, impl)
+    writer.write_objects('sink',set(value.sinks) - remote_sinks, impl)
+    writer.write_objects('target',value.target_sinks.with_names, impl)
+    writer.write_objects('source',value.source_sinks.with_names, impl)
 
 def write_function(writer, value, root):
     func = ET.SubElement(root, 'function')
     func.set('id', value.label.name)
-    writer.write_object('extend',value.ext, func)
-    source_map = ((sink, sink.user_slot(value)) for sink in value.sources)
-    writer.write_object('source_map',source_map, func)
-    target_map = ((sink, sink.slot) for sink in value.targets)
-    writer.write_object('target_map',target_map, func)
-
-def write_sources(writer, value, root):
-    srcs = ET.SubElement(root, 'sources')
-    writer.write_objects('slot',value.values(), srcs)
-
-def write_targets(writer, value, root):
-    trgs = ET.SubElement(root, 'targets')
-    writer.write_objects('slot',value.values(), trgs)
+    writer.write_object('data',value.data, func)
+    writer.write_object('sources',value.sources.with_names, func)
+    writer.write_object('targets',value.targets.with_names, func)
 
 def write_slot(writer, value, root):
     slot = ET.SubElement(root, 'slot')
-    slot.set('id',value.id)
-    for name, value in vars(value.extends).items():
-            writer.write_object(name, value, slot)
+    slot.set('id',value[0])
+    writer.write_object('data',value[1],slot)
 
 def write_sink(writer, value, root):
     sink = ET.SubElement(root, 'sink')
     sink.set('id', value.label.name)
-    for name, value in vars(value.ext).items():
-            writer.write_object(name, value, sink)
+    writer.write_object('data',value.data,root)
 
 def write_import(writer, value, root):
     ET.SubElement(root,'import').text = repr(value.label)
 
-def write_extend(name):
+def write_condition(name):
     def writer(writer, value, root):
-        extend = ET.SubElement(root, name)
-        for n, v in vars(value).items():
-            writer.write_object(n,v,extend)
+        subtree = ET.SubElement(root,name)
+        writer.write_object('slots',value.slots.with_names,subtree)
+        writer.write_object('data',value.data,subtree)
     return writer
 
-def write_maps(name):
+def write_list(name, subname):
     def writer(writer, value, root):
-        maps = ET.SubElement(root, name)
-        for sink_pair in value:
-            writer.write_object('map',sink_pair,maps)
+        list_ = ET.SubElement(root, name)
+        for v in value:
+            writer.write_object(subname,v,list_)
     return writer
 
 def write_map(writer, value, root):
-    (sink, slot) = value
+    (slot, sink) = value
     map_ = ET.SubElement(root,'map')
     map_.set('sink', sink.label.name)
     map_.set('slot', slot)
 
-def write_remote_sink(writer, value, root):
-    r_sink = ET.SubElement(root,'remote_sink')
-    r_sink.set('id',value.label.name)
-    if value.is_method_source():
-        r_sink.set('source',value.slot)
-    if value.is_method_target():
-        r_sink.set('target',value.method_target)
+def write_remote(name):
+    def writer(writer, value, root):
+        r_sink = ET.SubElement(root,name)
+        r_sink.set('id',value[1].label.name)
+        r_sink.set('slot',value[0])
+    return writer
+
+def write_data(writer, value, root):
+    for n, v in vars(value).items():
+        writer.write_object(n,v,root)
 
 def write_std(writer, value, root):
     log.debug('Writer encountered an unknow value {}'.format(value))
@@ -108,17 +98,17 @@ class XMLWriter (object):
             'method'       : write_method,
             'impl'         : write_impl,
             'function'     : write_function,
-            'sources'      : write_sources,
-            'targets'      : write_targets,
-            'require'      : write_extend('require'),
-            'ensure'       : write_extend('ensure'),
-            'extend'       : write_extend('extend'),
+            'sources'      : write_list('sources','map'),
+            'targets'      : write_list('targets','map'),
+            'require'      : write_condition('require'),
+            'ensure'       : write_condition('ensure'),
+            'slots'        : write_list('slots','slot'),
             'slot'         : write_slot,
             'sink'         : write_sink,
-            'remote_sink'  : write_remote_sink,
-            'source_map'   : write_maps('source_map'),
-            'target_map'   : write_maps('target_map'),
+            'source'       : write_remote('source'),
+            'target'       : write_remote('target'),
             'map'          : write_map,
+            'data'         : write_data, 
             }
 
     def __init__(self, extend_formats):
@@ -155,7 +145,11 @@ class XMLWriter (object):
             ET.SubElement(root,'import').text = repr(imp.label)
 
     def write_object(self, name, value, root):
-        self.formats.get(name,write_std)(self, value, root)
+        if name in self.formats:
+            self.formats[name](self, value, root)
+        else:
+            log.debug('%r not in known formats, adding directly to xml',name)
+            write_std(self, value, root)
 
     def write_objects(self, name, values, root):
         for value in values:
@@ -172,7 +166,8 @@ def parse_impl(parser, tree):
     impl = Impl(**tree.attrib)
     impl.functions = parser.parse_objects( tree, 'function')
     impl.sinks = parser.parse_objects( tree, 'sink')
-    impl.remote_sinks = parser.parse_objects( tree, 'remote_sink')
+    impl.targets = parser.parse_objects( tree, 'target')
+    impl.sources = parser.parse_objects( tree, 'source')
     return impl
 
 def parse_ext_object(cls,required):
@@ -216,7 +211,8 @@ class XMLParser (object):
             'ensure'       : parse_ext_object(Condition,['slots']),
             'sink'         : parse_ext_object(Sink,[]),
             'slot'         : parse_ext_object(Slot,[]),
-            'remote_sink'  : parse_object(RemoteSink,[]),
+            'source'       : parse_object(RemoteSink,[]),
+            'target'       : parse_object(RemoteSink,[]),
             'map'          : parse_object(Map,[]),
             'targets'      : parse_list('map'),
             'sources'      : parse_list('map'),

@@ -72,7 +72,7 @@ class Sink(ParseObject):
     def requried_attributes(self): return ['id']
 
 class RemoteSink(ParseObject):
-    def requried_attributes(self): return ['id']
+    def requried_attributes(self): return ['id','slot']
 
 class Slot(ParseObject):
     def requried_attributes(self): return ['id']

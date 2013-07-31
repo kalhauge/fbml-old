@@ -81,13 +81,10 @@ class Builder (object):
         impl = model.Impl(label)
         for sink in tree.sinks:
             impl.make_sink(sink.id,self.factory(sink,'sink'))
-        for remote in tree.remote_sinks:
-            if hasattr(remote,'target'):
-                remote.slot = remote.target
-                impl.make_target_sink(remote.id,remote.slot,self.factory(remote,'target_sink'))
-            elif hasattr(remote, 'source'):
-                remote.slot = remote.source
-                impl.make_source_sink(remote.id,remote.slot, self.factory(remote,'source_sink'))
+        for remote in tree.targets:
+            impl.make_target_sink(remote.id,remote.slot,self.factory(remote,'target_sink'))
+        for remote in tree.sources:
+            impl.make_source_sink(remote.id,remote.slot, self.factory(remote,'source_sink'))
         for function in tree.functions:
             impl.make_function(function.id,self.factory(function,'function'))
         return impl
