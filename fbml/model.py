@@ -68,8 +68,8 @@ class Method (Namespace):
         super(Method,self).__init__(label)
         self._requirements = requirements
         self._ensurances = ensurances 
-        self.sources = dict()
-        self.targets = dict()
+        self.sources = list()
+        self.targets = list()
 
     req = readonly('_requirements')
     ens = readonly('_ensurances')
@@ -82,14 +82,14 @@ class Method (Namespace):
         res = self.make('target_'+slot, sink.add_user)
         for name, data in vars(self.ens.targets[slot].extends).items():
             sink.ext.set(name,data)
-        self.targets[res] = slot
+        self.targets.append(res)
         return res
     
     def make_source(self, slot, sink):
         res = self.make('source_'+str(slot),sink.set_target) 
         for name, data in vars(self.req.sources[slot].extends).items():
             sink.ext.set(name,data)
-        self.sources[res] = slot
+        self.sources.append(res)
         return res
 
     def make_impl(self, factory):
@@ -97,7 +97,7 @@ class Method (Namespace):
         return self.impl
 
     def __repr__(self):
-        return '<method label={m.label}>'.format(m=self)
+        return '<method {m.label}>'.format(m=self)
 
     def depth(self,helper):
         return 0  
@@ -162,7 +162,7 @@ class Sink (Extendable):
     def __init__(self, label):
         Extendable.__init__(self)
         self._label = label 
-        self._users = [] 
+        self._users = dict() 
    
     label = readonly('_label')
     users = readonly('_users')
@@ -199,7 +199,7 @@ class Sink (Extendable):
         return self
 
     def add_user(self, target):
-        self._users.append(target)
+        self._users[target.parrent] = target
         return self
 
     def __str__(self):
