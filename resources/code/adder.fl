@@ -74,7 +74,6 @@
             </targets>
         </function> 
     </impl>
-
     <method id="multiply-with-four">
         <require>
             <method_name>multiply_with_four</method_name>

@@ -47,114 +47,6 @@ def compile_to_llvm(module):
 def get_llvm_types(elm):
     return llvm_types(s['Type'] for s in elm)
     
-
-class FunctionCodeBuilder(object):
-
-    def __init__(self,llvm_module,method):
-        self._llvm_module = llvm_module
-        self._vars = dict()
-        self.new_function(method)
-
-    def new_function(self,method):
-        args_types = self.getArgumentTypes(method)
-        ret_types = self.getReturnTypes(method)
-
-        args_types.extend(llvmc.Type.pointer(ret) for ret in ret_types)
-      
-        self._function = llvmc.Function.new(
-                self._llvm_module,
-                llvmc.Type.function(llvmc.Type.void(),list(args_types)),
-                method.getInternalId()
-                )
-        argnames = list(x.getId() for i,x in enumerate(method.getSources())
-                if not method.getRequirement('Type')[i].isUnreal())
-        argnames.extend(s.getId() for i,s in enumerate(method.getSinks())
-                if not method.getEnsurance('Type')[i].isUnreal()) 
-        
-        for arg,name in zip(self._function.args,argnames):
-            arg.name = name
-            self.setVar(name,arg)
-        
-        blok = self._function.append_basic_block('entry')
-        self._bldr = llvmc.Builder.new(blok) 
-        return self 
-
-    def getFunction(self):
-        return self._function
-
-    def call_buildin(self,name,srcs,sink):
-        print(name,srcs,sink)
-        arg = (
-                self.getVar(srcs[0].getSink().getId()),
-                self.getVar(srcs[1].getSink().getId()),
-                sink.getId()
-                )
-        print(arg)
-        var = getattr(self._bldr,name)(*arg)
-        if var.name != sink.getId():
-            print(var.name,sink.getId())
-            #Variable already exists
-            self._bldr.store(var,self.getVar(sink.getId()))
-        else: self.setVar(sink.getId(),var)
-        print("Done")
-        return self
-
-    def call(self,function,srcs,sinks):
-        args = list(get_llvm_types(srcs))
-        args.extend(get_llvm_types(sinks))
-        print(function,args)
-        self._bldr.call(function,args)
-        return self
-
-    def getArgumentTypes(self,method):
-        return list(llvm_types(
-                method.req('Type')[i] 
-                    for i,s in enumerate(method.getSources())
-                ))
-
-    def getReturnTypes(self,method):
-        return llvm_types(
-                method.ens('Type')[i] 
-                    for i,s in enumerate(method.getSinks())
-                )
-
-
-    def ret_void(self):
-        self._bldr.ret_void()
-        return self
-
-    def getVar(self,name):
-        return self._vars[name]
-
-    def setVar(self,name,var):
-        self._vars[name] = var
-        return self
-
-
-    def new_function(self,method):
-        args_types = self.getArgumentTypes(method)
-        ret_types = self.getReturnTypes(method)
-
-        args_types.extend(llvmc.Type.pointer(ret) for ret in ret_types)
-      
-        self._function = llvmc.Function.new(
-                self._llvm_module,
-                llvmc.Type.function(llvmc.Type.void(),list(args_types)),
-                method.getInternalId()
-                )
-        argnames = list(x.getId() for i,x in enumerate(method.getSources())
-                if not method.getRequirement('Type')[i].isUnreal())
-        argnames.extend(s.getId() for i,s in enumerate(method.getSinks())
-                if not method.getEnsurance('Type')[i].isUnreal()) 
-        
-        for arg,name in zip(self._function.args,argnames):
-            arg.name = name
-            self.setVar(name,arg)
-        
-        blok = self._function.append_basic_block('entry')
-        self._bldr = llvmc.Builder.new(blok) 
-        return self 
-
 type_map = {
     'Integer'  : llvmc.Type.int(),
     'Real'     : llvmc.Type.double(),
@@ -174,11 +66,12 @@ class FunctionCodeBuilder (object):
 
     def _get_types(self):
         types = [None] * ( len(self.source_index) + len(self.target_index) )
-        for slot_id, slot in self.method.req.sources.items():
-            types[self.source_index[slot_id]] = llvm_type(slot.extends.type)
-        for slot_id, slot in self.method.ens.targets.items():
+        impl = self.method.impl
+        for slot_id, sink in impl.source_sinks.with_names:
+            types[self.source_index[slot_id]] = llvm_type(sink.data.type)
+        for slot_id, sink in impl.target_sinks.with_names:
             types[self.target_index[slot_id]] = \
-                    llvmc.Type.pointer(llvm_type(slot.extends.type))
+                    llvmc.Type.pointer(llvm_type(sink.data.type))
         return types
 
 
@@ -187,10 +80,10 @@ class FunctionCodeBuilder (object):
         return dict((slot_id,index + start) for index,slot_id in indices )
 
     def _setup(self):
-        self.source_index = self._index_map(self.method.req.sources)
-        self.target_index = self._index_map(self.method.ens.targets,
-            len(self.method.req.sources))
-        
+        self.source_index = self._index_map(sorted(self.method.req.slots.names))
+        self.target_index = self._index_map(sorted(self.method.ens.slots.names),
+            len(self.method.req.slots))
+       
         args_types = self._get_types()
 
         self.llvm_function = llvmc.Function.new(
@@ -198,14 +91,16 @@ class FunctionCodeBuilder (object):
                 llvmc.Type.function(llvmc.Type.void(),args_types),
                 self.method.label.name
                 )
+
+        impl = self.method.impl
        
-        for sink, slot_id in self.method.sources.items():
+        for slot_id, sink in impl.source_sinks.with_names:
             index = self.source_index[slot_id]
             arg = self.llvm_function.args[index]
             arg.name = sink.label.name
             self.var[sink] = arg
 
-        for sink, slot_id in self.method.targets.items():
+        for slot_id, sink in impl.target_sinks.with_names:
             index = self.target_index[slot_id]
             arg = self.llvm_function.args[index]
             arg.name = sink.label.name
@@ -220,23 +115,21 @@ class FunctionCodeBuilder (object):
 
     @log_it(log.debug)
     def call_buildin(self, method, function):
-        buildin_function = getattr(self.bldr, method.ens.llvm)
+        buildin_function = getattr(self.bldr, method.ens.data.llvm)
 
-        args = [None, None, list(function.targets)[0].label.name]
+        ret_sink = list(function.targets)[0]
+        args = [None, None, ret_sink.name]
 
-        for sink, slot_id in function.source_slots.items():
-            slot = method.req.sources[slot_id]
-            args[slot.extends.llvm_arg] = self.var[sink]
+        for slot_id, sink in function.sources.with_names:
+            slot = method.req.slots[slot_id]
+            args[slot.llvm_arg] = self.var[sink]
     
         var = buildin_function(*args)
-        log.debug("Got %r from %s",var,args[2])
-        if var.name != args[2]:
-            log.debug("REACHED TARGET")
+        if var.name != ret_sink.name:
              #Variable already exists
-            self.bldr.store(var,self.var[list(function.targets)[0]])
+            self.bldr.store(var,self.var[ret_sink])
         else: 
-            self.var[list(function.targets)[0]] = var
-        log.debug(self.var)
+            self.var[ret_sink] = var
         return self
 
 
@@ -261,15 +154,15 @@ class MethodCreater(visitors.ControlFlowVisitor):
         from .type import has_types
         from ..util.matchers import has_sources, has_targets
         
-        method_name = function.ext.method_name
-        types = [(slot,sink.ext.type) 
-                for sink, slot in function.source_slots.items()]
+        method_name = function.data.method_name
+        types = [(slot,sink.data.type) 
+                for slot, sink in function.sources.with_names]
        
         requirement = all_of(
                         has_method_name(method_name),
                         has_types(types),
-                        has_sources(function.source_slots.values()),
-                        has_targets(function.slot_targets)
+                        has_sources(function.sources.names),
+                        has_targets(function.targets.names)
                        )
 
         method = self._module.get_method_where(requirement)

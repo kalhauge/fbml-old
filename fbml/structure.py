@@ -130,11 +130,18 @@ class Namespace (object):
     def names(self):
         return iter(self.children)
 
+    @property
+    def name(self):
+        return self.label.name
+
     def __getitem__(self,name):
         return self.find_from_name_list(name.split('.'))
 
     def __iter__(self):
         return iter(self.children.values())
+
+    def __len__(self):
+        return len(self.children)
 
     def __repr__(self):
         return repr(self.label)
@@ -203,7 +210,7 @@ class Module (Package):
 
     @property
     def methods(self):
-        return self._children.values()
+        return self
 
     def make_method(self, name, factory):
         return self.make(name, factory) 
