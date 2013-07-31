@@ -18,10 +18,14 @@ class Extension (object):
         return self.__class__.NAME
 
     def xml_formatter(self):
-        return self.__class__.XML_FORMAT
+        return self.__class__.XML_FORMATS
 
     def tuble(self):
         return (self.name(),self)
+
+    def __repr__(self):
+        return "<Extension '{}' formats = {}>".format(self.NAME,self.XML_FORMATS)
+
 
 from . import type, methodname,  llvm
 

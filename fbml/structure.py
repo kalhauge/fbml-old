@@ -201,6 +201,7 @@ class Module (Package):
             raise exceptions.AmbiguousMethodCall(results,matcher)
         elif not results:
             raise exceptions.NoMethodCall(matcher)
+            
         return results[0]
 
     def find_or_make(self, name_list, factory):

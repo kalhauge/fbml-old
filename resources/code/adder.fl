@@ -7,10 +7,18 @@
         <require>
             <method_name>multi_add</method_name>
             <sources>
-                <slot id="a"/>
-                <slot id="b"/>
-                <slot id="c"/>
-                <slot id="d"/>
+                <slot id="a">
+                    <type>Integer</type>
+                </slot>
+                <slot id="b">
+                    <type>Integer</type>
+                </slot>
+                <slot id="c">
+                    <type>Integer</type>
+                </slot>
+                <slot id="d">
+                    <type>Integer</type>
+                </slot>
             </sources>
         </require>
         <ensure>
@@ -73,4 +81,38 @@
         </function> 
     </impl>
 
+    <method id="multiply-with-four">
+        <require>
+            <method_name>multiply_with_four</method_name>
+            <sources>
+                <slot id='in'>
+                    <type>Integer</type>
+                </slot>
+            </sources>
+        </require>
+        <ensure>
+            <targets>
+                <slot id='out'/>
+            </targets>
+        </ensure>
+    </method>
+
+    <impl method_id="multiply-with-four">
+        <remote_sink id='a' source='in' />
+        <remote_sink id='b' targets='out' />
+        <function id="f_1">
+            <extend>
+                <method_name>multi_add</method_name>
+            </extend>
+            <source_map>
+                <map sink='a' slot='a'/>
+                <map sink='a' slot='b'/>
+                <map sink='a' slot='c'/>
+                <map sink='a' slot='d'/>
+            </source_map>  
+            <target_map>
+                <map sink='b' slot='e'/>
+            </target_map>
+        </function>
+    </impl>
 </fbml>

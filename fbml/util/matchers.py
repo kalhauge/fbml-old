@@ -5,7 +5,7 @@ Currently just an wrapper and extendtions of the :mod:`hamcrest` module.
 
 """
 
-import hamcrest.core as hc
+import hamcrest as hc
 from hamcrest.core.base_matcher import BaseMatcher
 from hamcrest.core.helpers.hasmethod import hasmethod
 
@@ -15,17 +15,33 @@ class Matcher (BaseMatcher):
         super(Matcher,self)._matches(item)
 
 all_of = hc.all_of
-class require (Matcher):
 
-    def __init__(self,name,matcher):
-        self._name = name
-        self._matcher = matcher
+class has_sources(Matcher):
+    
+    def __init__(self,slots):
+        self._slots = list(slots)
+        self._matcher = hc.contains_inanyorder(*self._slots)
 
-    def _matches(self, item):
-        return self._matcher.matches(item.req.get_all()[self._name])
+    def _matches(self, method):
+        return self._matcher.matches(method.req.sources)
 
     def describe_to(self,description):
-        description.append("requirement with name {!r} that matches {!s}".format(
-                self._name,
-                self._matcher)
-                )
+        description.append("sources with slots satisfying ( ")
+        self._matcher.describe_to(description)
+        description.append(" )")
+
+class has_targets(Matcher):
+    
+    def __init__(self,slots):
+        self._slots = list(slots)
+        self._matcher = hc.contains_inanyorder(*self._slots)
+
+    def _matches(self, method):
+        return self._matcher.matches(method.ens.targets)
+       
+    def describe_to(self,description):
+        description.append("targets with slots satisfying ( ")
+        self._matcher.describe_to(description)
+        description.append(" )")
+
+

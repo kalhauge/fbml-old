@@ -33,7 +33,7 @@ class DataFlowVisitor (object):
         # Calculates the runorder and then removes the method
         runorder = calculate_runorder(impl)[1:]
         
-        results = self.setup(method);
+        results = dict(self.setup(method))
         for function in runorder:
             results.update(self.apply(function,results))
         ret_method = self.final(method,results)

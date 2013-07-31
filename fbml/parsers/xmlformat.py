@@ -41,8 +41,8 @@ def write_function(writer, value, root):
     func = ET.SubElement(root, 'function')
     func.set('id', value.label.name)
     writer.write_object('extend',value.ext, func)
-    writer.write_object('source_map',value.sources, func)
-    writer.write_object('target_map',value.targets, func)
+    writer.write_object('source_map',value.source_slots.items(), func)
+    writer.write_object('target_map',((t,s) for s,t in value.slot_targets.items()), func)
 
 def write_sources(writer, value, root):
     srcs = ET.SubElement(root, 'sources')
@@ -77,14 +77,15 @@ def write_extend(name):
 def write_maps(name):
     def writer(writer, value, root):
         maps = ET.SubElement(root, name)
-        for sink in value:
-            writer.write_object('map',sink,maps)
+        for sink_pair in value:
+            writer.write_object('map',sink_pair,maps)
     return writer
 
 def write_map(writer, value, root):
+    (sink, slot) = value
     map_ = ET.SubElement(root,'map')
-    map_.set('sink', value.label.name)
-    map_.set('slot', value.slot)
+    map_.set('sink', sink.label.name)
+    map_.set('slot', slot)
 
 def write_remote_sink(writer, value, root):
     r_sink = ET.SubElement(root,'remote_sink')
@@ -95,6 +96,7 @@ def write_remote_sink(writer, value, root):
         r_sink.set('target',value.method_target)
 
 def write_std(writer, value, root):
+    log.debug('Writer encountered an unknow value {}'.format(value))
     root.append(value)
 
 class XMLWriter (object):
@@ -119,6 +121,7 @@ class XMLWriter (object):
 
     def __init__(self, extend_formats):
         self.formats = self._std_formats
+        log.debug('Writing with extensions : %s', extend_formats)
         self.formats.update(
                 (x.name, x.write) 
                 for x in chain.from_iterable(
@@ -244,6 +247,7 @@ class XMLParser (object):
 
     def __init__(self,extend_formats):
         self.formats = XMLParser._std_formats
+        log.debug('Parsing with extendsions: %s', extend_formats)
         self.formats.update(
                 (x.name, x.parse) 
                 for x in chain.from_iterable(

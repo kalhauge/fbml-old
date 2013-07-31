@@ -19,20 +19,28 @@ class TypeFormat(object):
     def write(self, writer, value, root):
         ET.SubElement(root,'type').text = value.name
 
-class TypesFormat(object):
-    name = "types"
+# class TypesFormat(object):
+#     name = "types"
+# 
+#     def parse(self, parser, tree):
+#         return frozenset(parser.parse_objects(tree,'type'))
+# 
+#     def write(self, writer, value, root):
+#         elm = ET.SubElement(root, 'types')
+#         for val in value:
+#             writer.write_object(value,root)
 
-    def parse(self, parser, tree):
-        return parser.parse_objects(tree,'type')
+def check(function):
+    def inner(*args):
+        print(args)
+        ret = function(*args)
+        print(ret)
+        return ret
+    return inner
 
-    def write(self, writer, value, root):
-        elm = ET.SubElement(root, 'types')
-        for val in value:
-            writer.write_object(value,root)
-
-def could_be(t,method,i):
+def could_be(type_,method,slot):
     try:
-        return isinstance(t,Any) or t.name() == method.req.type[i].name() 
+        return type_ == method.req.sources[slot].extends.type
     except KeyError:
         return False
 
@@ -42,8 +50,7 @@ class has_types (matchers.Matcher):
         self.types = list(source_types)
 
     def _matches(self,method):
-        could_be_types = [could_be(t,method,i) for i,t in self.types]
-        return all(could_be_types)
+        return all(could_be(t,method,i) for i,t in self.types)
 
     def describe_to(self,description): 
         description.append("has sources matching the pathern {}".format(self.types))
@@ -62,24 +69,17 @@ class Type (object):
     @staticmethod
     def new(name):
         if not name in Type._buildin_types:
-            raise 
-        
+            raise TypeDoesNotExist(name + " does not exist")
         return Type(name) 
 
+    def __hash__(self):
+        return hash(self.name)
 
-    def is_unreal(self):
-        return False
+    def __eq__(self, other):
+        return self.name == other.name
 
     def __repr__(self):
-        return "<type {}>".format(self.name())
-
-
-
-
-class TypeExtension(Extension):
-    NAME = "type"
-    XML_FORMATS = [TypeFormat(), TypesFormat()] 
-
+        return "<type {}>".format(self.name)
 
 class TypeSetter (visitors.DataFlowVisitor):
 
@@ -88,59 +88,44 @@ class TypeSetter (visitors.DataFlowVisitor):
         self.module = module
 
     def setup(self,method):
-        slot_sinks = dict((slot, method.impl.sinks[source_name])
-                for slot, source_name in method.req.sources.items())
+        return ((sink, sink.ext.type) for sink in method.sources)
 
-        for slot, sink in slot_sinks.items():
-            try:
-                if sink.ext.type != method.req.type[slot]:
-                    raise Exception("In consistent state on source {} and method {}"
-                            .format(source.ext.type, method.req.type[slot]))
-            except KeyError:
-                sink.ext.type = method.req.type[slot]
-        return dict((sink, sink.ext.type) for sink in slot_sinks.values())
+    def apply(self,function,sink_types):
+        types = [(sink.slot, type_) for sink, type_ in sink_types.items() 
+                if sink in function.sources]
 
-    def merge(self,function,sinks):
-        sources = dict()
-        for source in function.sources:
-            source.ext.type = source.sink.ext.type
-            sources[source] = source.ext.type
-        return sources
-
-    def apply(self,function,sources):
-        from .. import model
-        if not function.sources: return {function.sinks[0]:function.sinks[0].ext.type}
-        #Determine typesj
-        types = [(source.slot, source.ext.type)
-                    for source in sources]
+        types = [ (slot, sink_types[sink]) for sink, slot in function.source_slots.items()]
 
         method_name = function.ext.method_name
+        
         from .methodname import has_method_name
-        from .sources import has_sources_length
-        from .sinks import has_sinks_length
+        from ..util.matchers import has_targets, has_sources
+
         #Determine method
         method = self.module.get_method_where(
                 matchers.all_of(
                     has_types(types),
                     has_method_name(method_name),
-                    has_sources_length(len(sources)),
-                    has_sinks_length(len(function.sinks))
+                    has_sources(slot for slot in function.source_slots.values()),
+                    has_targets(slot for slot in function.slot_targets)
                     )
                 )
-        try: method_types = method.ens.type
-        except KeyError: 
-            self.visit(method)
-            method_types = method.ens.type
-       
-        for sink in function.sinks:
-            sink.ext.type = method_types[sink.slot]
 
-        return dict((sink, sink.ext.type) for sink in function.sinks)
-
+        for slot, sink in function.slot_targets.items():
+            sink.ext.type = method.ens.targets[slot].extends.type
+            yield sink, sink.ext.type
 
     def final(self,method,sink_types):
-        method.ens.type = dict( 
-                (sink.slot, sink_types[sink]) 
-                for sink in method.internal_sinks)
-
+        for sink, slot_id in method.targets.items():
+            method.ens.targets[slot_id].extends.type = sink.ext.type
+        
         return method
+
+class TypeExtension(Extension):
+    NAME = "type"
+    XML_FORMATS = [
+            TypeFormat(), 
+            #TypesFormat()
+            ] 
+
+

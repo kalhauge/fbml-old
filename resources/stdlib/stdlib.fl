@@ -6,23 +6,19 @@
             <method_name>add</method_name>
             <sources>
                 <slot id="a">
-                    <types>
-                        <type>Integer</type>
-                    </types>
+                    <type>Integer</type>
+                    <llvm_arg>0</llvm_arg>
                 </slot>
                 <slot id="b">
-                    <types>
-                        <type>Integer</type>
-                    </types>
+                    <type>Integer</type>
+                    <llvm_arg>1</llvm_arg>
                 </slot>
             </sources> 
         </require>
         <ensure>  
             <targets>
                 <slot id="c">
-                    <types>
-                        <type>Integer</type>
-                    </types>
+                    <type>Integer</type>
                 </slot>
             </targets>
             <llvm>add</llvm>
@@ -34,51 +30,43 @@
             <method_name>add</method_name>
             <sources>
                 <slot id="a">
-                    <types>
-                        <type>Real</type>
-                    </types>
+                    <type>Real</type>
+                    <llvm_arg>0</llvm_arg>
                 </slot>
                 <slot id="b">
-                    <types>
-                        <type>Real</type>
-                    </types>
+                    <type>Real</type>
+                    <llvm_arg>1</llvm_arg>
                 </slot>
             </sources> 
         </require>
         <ensure>  
             <targets>
                 <slot id="c">
-                    <types>
-                        <type>Real</type>
-                    </types>
+                    <type>Real</type>
                 </slot>
             </targets>
             <llvm>add</llvm>
         </ensure>
-      </method>
+    </method>
 
     <method id="sub-integer">
         <require>
             <method_name>sub</method_name>
             <sources>
                 <slot id="a">
-                    <types>
-                        <type>Integer</type>
-                    </types>
+                    <type>Integer</type>
+                    <llvm_arg>0</llvm_arg>
                 </slot>
                 <slot id="b">
-                    <types>
-                        <type>Integer</type>
-                    </types>
+                    <type>Integer</type>
+                    <llvm_arg>1</llvm_arg>
                 </slot>
             </sources> 
         </require>
         <ensure>  
             <targets>
                 <slot id="c">
-                    <types>
-                        <type>Integer</type>
-                    </types>
+                    <type>Integer</type>
                 </slot>
             </targets>
             <llvm>sub</llvm>

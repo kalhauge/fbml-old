@@ -2,6 +2,7 @@ from . import Extension
 from ..parsers import xmlformat
 from ..util import matchers
 
+import xml.etree.ElementTree as ET
 
 class MethodNameFormat (object):
     name = 'method_name'
@@ -10,7 +11,7 @@ class MethodNameFormat (object):
         return tree.text
 
     def write(self, tag, data, tree):
-        tree.text = data
+        method_name = ET.SubElement(tree,'method_name').text = data
 
 class has_method_name (matchers.Matcher):
     
@@ -21,8 +22,9 @@ class has_method_name (matchers.Matcher):
         return method.req.method_name == self._method_name 
 
     def describe_to(self,description):
-        description.append('has method name of ')
+        description.append('has method name of "')
         description.append(self._method_name)
+        description.append('"')
 
 def get_method_name(function):
     return function['method_name']

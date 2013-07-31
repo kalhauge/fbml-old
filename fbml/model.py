@@ -68,8 +68,8 @@ class Method (Namespace):
         super(Method,self).__init__(label)
         self._requirements = requirements
         self._ensurances = ensurances 
-        self.sources = list()
-        self.targets = list()
+        self.sources = dict()
+        self.targets = dict()
 
     req = readonly('_requirements')
     ens = readonly('_ensurances')
@@ -79,17 +79,17 @@ class Method (Namespace):
         return self.find('impl')
 
     def make_target(self, slot, sink):
-        res = self.make('target_'+str(slot), sink.add_user)
+        res = self.make('target_'+slot, sink.add_user)
         for name, data in vars(self.ens.targets[slot].extends).items():
             sink.ext.set(name,data)
-        self.targets.append(res);
+        self.targets[res] = slot
         return res
     
     def make_source(self, slot, sink):
         res = self.make('source_'+str(slot),sink.set_target) 
         for name, data in vars(self.req.sources[slot].extends).items():
             sink.ext.set(name,data)
-        self.sources.append(res)
+        self.sources[res] = slot
         return res
 
     def make_impl(self, factory):
@@ -121,23 +121,31 @@ class Function (Namespace, Extendable):
     def __init__(self, label):
         super(Function, self).__init__(label)
         Extendable.__init__(self)
-        self.sources = list() 
-        self.targets = list()
+        self.source_slots = dict() 
+        self.slot_targets = dict()
 
     def make_target(self, slot, sink):
         res = self.make('o_'+str(slot), sink.set_target)
-        self.targets.append(res);
+        self.slot_targets[slot] = res
         return res
     
     def make_source(self, slot, sink):
         res = self.make('i_'+str(slot),sink.add_user) 
-        self.sources.append(res)
+        self.source_slots[res] = slot
         return res
 
     @property
     def impl(self):
         return self.label.parrent
-    
+
+    @property
+    def sources(self):
+        return self.source_slots.keys()
+   
+    @property
+    def targets(self):
+        return self.slot_targets.values()
+
     def __repr__(self):
         return '<function label={f.label}>'.format(f=self)
 
@@ -176,7 +184,8 @@ class Sink (Extendable):
 
     @property
     def method_target(self):
-        return [user.name.split('_',1)[1] for user in self.users if isinstance(user.parrent,Method)][0]
+        return [user.name.split('_',1)[1] 
+                for user in self.users if isinstance(user.parrent,Method)][0]
 
     def is_method_source(self):
         return isinstance(self.owner, Method)
@@ -192,6 +201,9 @@ class Sink (Extendable):
     def add_user(self, target):
         self._users.append(target)
         return self
+
+    def __str__(self):
+        return '<sink {s.label.name} at {s.target.name}>'.format(s=self)
 
     def __repr__(self):
         return '<sink {s.label} at {s.target}>'.format(s=self)
