@@ -44,17 +44,74 @@ def compile_to_llvm(module):
         result = visitor.visit(method)
     return llvm_module
 
+int_ = llvmc.Type.int(32)
+char = llvmc.Type.int(8)
+void = llvmc.Type.void()
+ptr = llvmc.Type.pointer
+array = llvmc.Type.array
+
+def execute_method(llvm_module, method, args):
+   
+    ### GLOBAL
+
+    pfn = llvmc.Type.function(int_, [ptr(char)],True)
+    printf = llvmc.Function.new(llvm_module,pfn,'printf')
+
+    int_printer = llvm_module.add_global_variable(array(char,12),'iprt')
+    int_printer.initializer = llvmc.GlobalVariable.stringz("Result: %i\n")
+    
+    ### LOCAL
+
+    function_type = llvmc.Type.function(void,[])
+    llvm_function = llvmc.Function.new(llvm_module,function_type,name='main')
+    blok = llvm_function.append_basic_block('entry')
+    bldr = llvmc.Builder.new(blok) 
+
+    function_args = [] 
+    str_ptr = bldr.gep(int_printer,[llvm_int(0), llvm_int(0)])
+
+    for data, val in zip(sorted(method.req.slots,key=llvm_arg),args):
+        function_args.append(llvm_constant(data.type, val))
+    
+    results = []
+    for data in sorted(method.ens.slots,key=llvm_arg):
+        results.append(bldr.alloca(llvm_type(data.type)))
+
+    bldr.call(method.ens.llvm_function,function_args + results)
+    
+    for result, data in zip(results,sorted(method.ens.slots,key=llvm_arg)):
+        bldr.call(printf,[str_ptr, bldr.load(result)])
+    
+    bldr.ret_void()
+    llvm_function.verify()
+    llvm_module.verify()
+
+    return llvm_module
+
 def get_llvm_types(elm):
     return llvm_types(s['Type'] for s in elm)
     
 type_map = {
-    'Integer'  : llvmc.Type.int(),
-    'Real'     : llvmc.Type.double(),
-    'Char'     : llvmc.Type.int(8)
+    'Integer'  : (llvmc.Type.int(),'int'),
+    'Real'     : (llvmc.Type.double(),'real'),
+    #'Char'     : llvmc.Type.int(8)
 }
 
 def llvm_type(fbml_type):
-    return type_map[fbml_type.name]
+    return type_map[fbml_type.name][0]
+
+def llvm_int(value, bit=32):
+    return llvmc.Constant.int(llvmc.Type.int(bit),value)
+
+
+def llvm_constant(fbml_type, value):
+    name = type_map[fbml_type.name][1]
+    return getattr(llvmc.Constant, name)(llvm_type(fbml_type), value)
+
+def llvm_arg(data):
+    return data.llvm_arg
+
+
 
 class FunctionCodeBuilder (object):
 
@@ -108,6 +165,9 @@ class FunctionCodeBuilder (object):
             arg = self.llvm_function.args[sink.data.llvm_arg]
             arg.name = sink.label.name
             self.var[sink] = arg
+
+        for sink in impl.constant_sinks:
+            self.var[sink] = llvm_constant(sink.type,sink.value.value) 
 
         blok = self.llvm_function.append_basic_block('entry')
         self.bldr = llvmc.Builder.new(blok) 

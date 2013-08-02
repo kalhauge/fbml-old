@@ -10,13 +10,13 @@ log = logging.getLogger(__name__)
 from . import Extension
 
 class ValueFormat (object):
+    name = 'value'
 
     def parse(self, parser, tree):
         return ValueFactory(tree.text)
 
     def write(self, writer, value, root):
         ET.SubElement(root,'type').text = value.write() 
-
 
 class ValueFactory(object):
 
@@ -29,13 +29,17 @@ class ValueFactory(object):
     def write(self):
         return self.str_value
 
+    def build(self,data):
+        return self.get_value(data.type)
+        
+        
 class Value(object):
 
     def __init__(self, type_, value):
         self.value = value
         self.type = type_
 
-    @classmehtod
+    @classmethod
     def constant(cls, type_, value): 
         return cls(type_, value) 
 
@@ -46,5 +50,5 @@ class ValueVisitor(object):
     pass
 
 class ValueExtension(Extension):
-    XML_FORMATS = [ValueFormat]
+    XML_FORMATS = [ValueFormat()]
     NAME = 'value'

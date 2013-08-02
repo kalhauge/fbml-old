@@ -5,14 +5,18 @@ import logging
 log = logging.getLogger("flow2llvm")
 
 import fbml
-from fbml.extensions.llvm import compile_to_llvm
-from fbml.extensions.llvm import llvm_type, FunctionCodeBuilder
-from llvm.ee import ExecutionEngine, GenericValue
-extensions = ['method_name','llvm', 'type']
+from fbml.extensions.llvm import compile_to_llvm, execute_method
+extensions = ['method_name','llvm', 'type', 'value']
 
 def main(args):
     llvm_module = compile_to_llvm(args.module)
-    args.outfile.write(str(llvm_module))
+    try:
+        method = args.module['multi-add']
+        args.outfile.write(str(execute_method(llvm_module,method,[10,2,3,4])))
+    except Exception as e:
+        log.info("Error found while running main")
+        raise
+    return 0
 
 def parse_args():
     import argparse

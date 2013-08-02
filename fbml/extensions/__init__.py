@@ -27,12 +27,13 @@ class Extension (object):
         return "<Extension '{}' formats = {}>".format(self.NAME,self.XML_FORMATS)
 
 
-from . import type, methodname,  llvm
+from . import type, methodname, llvm, value
 
 extensions = [
         type.TypeExtension(), 
         methodname.MethodNameExtension(),
         llvm.LLVMExtension(),
+        value.ValueExtension()
         ] 
 
 named_extensions = dict(ext.tuble() for ext in extensions)

@@ -72,9 +72,13 @@ class Builder (object):
     def build_condition(self, label, tree):
         condition = model.Condition(label)
         for slot in tree.slots:
-            condition.make_slot(slot.id, 
-                    lambda label: self.assing_extends(slot,model.Data()))
-        self.assing_extends(tree,condition.data)
+            def build_slot(label):
+                slottmp = model.Extendable()
+                slottmp.data = model.Data()
+                self.assing_extends(slot, slottmp)
+                return slottmp.data 
+            condition.make_slot(slot.id, build_slot)
+        self.assing_extends(tree,condition)
         return condition
 
     def build_impl(self, label, tree):
@@ -98,7 +102,7 @@ class Builder (object):
             function.make_source(map_.slot,function.impl.sinks[map_.sink])
         for map_ in tree.targets:
             function.make_target(map_.slot,function.impl.sinks[map_.sink])
-        self.assing_extends(tree,function.data)
+        self.assing_extends(tree,function)
         return function
 
     def build_target_sink(self, target_label, label, tree):
@@ -115,12 +119,12 @@ class Builder (object):
     def build_constant_sink(self, constant_label, label, tree):
         sink = model.Sink(label)
         sink.target = constant_label 
-        self.assing_extends(tree, sink.data)
+        self.assing_extends(tree, sink)
         return sink
 
     def build_internal_sink(self, internal_label, label, tree):
         sink = model.Sink(label)
-        self.assing_extends(tree, sink.data)
+        self.assing_extends(tree, sink)
         return sink
 
     def factory(self, tree, name):
@@ -128,10 +132,16 @@ class Builder (object):
 
     def assing_extends(self, tree, obj):
         for name, data in vars(tree.data).items():
-            setattr(obj,name,data)
-            try:
-                data.build(obj)
-            except AttributeError: 
-                # Build is not required
-                pass
+            setattr(obj.data,name,data)
+        values = {} 
+        
+        for name, data in vars(obj.data).items():
+            try: 
+                values[name] = data.build(obj)
+            except AttributeError as e:
+                log.debug('No build face for %s; %s',name,e) 
+        
+        for name, data in values.items():
+            setattr(obj.data,name,data)
+        
         return obj

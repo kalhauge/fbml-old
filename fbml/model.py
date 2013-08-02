@@ -292,7 +292,6 @@ class Sink (Namespace, Extendable):
             helper[self] = self.owner.depth(helper) + 1
         return helper[self]
 
-
 class Data(object):
     """ The extendable data object """
 

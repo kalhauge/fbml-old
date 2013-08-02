@@ -106,7 +106,7 @@ class Namespace (object):
         """
         if not name_list: 
             return self
-        else: 
+        else:
             return self.find(name_list[0]).find_from_name_list(name_list[1:]) 
 
     def to_name_list(self):

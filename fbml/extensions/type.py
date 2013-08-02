@@ -59,14 +59,11 @@ class Type (object):
     
     _buildin_types = dict()
 
-    def __init__(self, name):
-        self.name = name
-
     @staticmethod
     def new(name):
         if not name in Type._buildin_types:
             raise TypeDoesNotExist(name + " does not exist")
-        return Type(name) 
+        return Type._buildin_types[name] 
 
     def __hash__(self):
         return hash(self.name)
@@ -84,26 +81,25 @@ class Type (object):
         raise str(value) 
 
 class IntegerType (Type):
+    name = 'Integer'
 
     def parse_str(self, string):
         return int(string)
 
 class CharType (Type):
+    name = 'Char'
 
     def parse_str(self, string):
         return string[0]
 
 class RealType (Type):
+    name = 'Real'
 
     def parse_str(self, string):
         return float(string)
 
 
-Type._buildin_types = {
-        'Integer' : IntegerType,
-        'Char'    : CharType,
-        'Real'    : RealType
-        }
+Type._buildin_types = {type_.name : type_() for type_ in [IntegerType,CharType,RealType]}
 
 class TypeSetter (visitors.DataFlowVisitor):
 
