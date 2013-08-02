@@ -5,17 +5,27 @@ import logging
 log = logging.getLogger("flow2llvm")
 
 import fbml
-from fbml.extensions.llvm import compile_to_llvm, execute_method
+from fbml.extensions.llvm import compile_to_llvm, add_main, source_data_in_order 
+from fbml.extensions.methodname import has_method_name
+
 extensions = ['method_name','llvm', 'type', 'value']
 
 def main(args):
     llvm_module = compile_to_llvm(args.module)
-    try:
-        method = args.module['multi-add']
-        args.outfile.write(str(execute_method(llvm_module,method,[10,2,3,4])))
-    except Exception as e:
-        log.info("Error found while running main")
-        raise
+    if args.run_method:
+        method_name, args_list = args.run_method
+        args_list = args_list.split()
+        try:
+            log.info("Adding main calling %s with %s", method_name, args_list)
+            method = args.module.get_method_where(has_method_name(method_name))
+            args_list = [data.type.parse_str(arg) 
+                    for data, arg in zip(source_data_in_order(method),args_list)]
+            add_main(llvm_module, method, args_list)
+        except Exception as e:
+            log.info("Error found while adding main")
+            log.info(e)
+            raise e
+    args.outfile.write(str(llvm_module))
     return 0
 
 def parse_args():
@@ -24,6 +34,7 @@ def parse_args():
     # Add arguments to parse
     parser.add_argument('-v','--verbose',action='store_true')
     parser.add_argument('-m','--modulename')
+    parser.add_argument('--run_method',nargs=2)
     parser.add_argument('-a','--outfile',type=argparse.FileType('w'), default=sys.stdout)
     parser.add_argument('-l','--libs', action='append', default=list())
     parser.add_argument('infile',type=argparse.FileType(), default=None, nargs='?')

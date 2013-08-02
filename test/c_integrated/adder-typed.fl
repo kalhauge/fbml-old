@@ -4,9 +4,6 @@
 <method id="multi-add">
 <require>
 <slots>
-<slot id="d">
-<type>Integer</type>
-</slot>
 <slot id="a">
 <type>Integer</type>
 </slot>
@@ -14,6 +11,9 @@
 <type>Integer</type>
 </slot>
 <slot id="b">
+<type>Integer</type>
+</slot>
+<slot id="d">
 <type>Integer</type>
 </slot>
 </slots>
@@ -28,16 +28,6 @@
 </ensure>
 </method>
 <impl method_id="multi-add">
-<function id="f_add1">
-<method_name>add</method_name>
-<sources>
-<map sink="a" slot="a" />
-<map sink="b" slot="b" />
-</sources>
-<targets>
-<map sink="n1" slot="c" />
-</targets>
-</function>
 <function id="f_add2">
 <method_name>add</method_name>
 <sources>
@@ -58,17 +48,27 @@
 <map sink="e" slot="c" />
 </targets>
 </function>
-<sink id="n1">
-<type>Integer</type>
-</sink>
+<function id="f_add1">
+<method_name>add</method_name>
+<sources>
+<map sink="a" slot="a" />
+<map sink="b" slot="b" />
+</sources>
+<targets>
+<map sink="n1" slot="c" />
+</targets>
+</function>
 <sink id="n2">
 <type>Integer</type>
 </sink>
+<sink id="n1">
+<type>Integer</type>
+</sink>
 <target id="e" slot="e" />
-<source id="d" slot="d" />
 <source id="a" slot="a" />
 <source id="c" slot="c" />
 <source id="b" slot="b" />
+<source id="d" slot="d" />
 </impl>
 <method id="multiply-with-four">
 <require>
@@ -91,10 +91,10 @@
 <function id="f_1">
 <method_name>multi_add</method_name>
 <sources>
-<map sink="a" slot="d" />
 <map sink="a" slot="a" />
 <map sink="a" slot="c" />
 <map sink="a" slot="b" />
+<map sink="a" slot="d" />
 </sources>
 <targets>
 <map sink="b" slot="e" />

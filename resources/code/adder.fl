@@ -3,7 +3,7 @@
     <import>stdlib</import>
 
     <method id="multi-add">
-        <!-- MultiAdd(a,b,c,d) : (a+b) + (c+d) -->
+        <!-- multi_add(a,b,c,d) : (a+b) + (c+d) -->
         <require>
             <method_name>multi_add</method_name>
             <slots>
@@ -74,7 +74,9 @@
             </targets>
         </function> 
     </impl>
+
     <method id="multiply-with-four">
+        <!-- multiply_with_four(a) : multi_add(a,a,a,a) -->
         <require>
             <method_name>multiply_with_four</method_name>
             <slots>
@@ -91,6 +93,7 @@
     </method>
 
     <impl method_id="multiply-with-four">
+        <!-- multiply_with_four(a) : multi_add(a,a,a,a) -->
         <source id='a' slot='in' />
         <target id='b' slot='out' />
         <function id="f_1">

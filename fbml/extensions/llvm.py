@@ -44,22 +44,25 @@ def compile_to_llvm(module):
         result = visitor.visit(method)
     return llvm_module
 
-int_ = llvmc.Type.int(32)
+int_ = llvmc.Type.int(64)
 char = llvmc.Type.int(8)
 void = llvmc.Type.void()
 ptr = llvmc.Type.pointer
 array = llvmc.Type.array
 
-def execute_method(llvm_module, method, args):
+def add_main(llvm_module, method, args):
    
     ### GLOBAL
 
     pfn = llvmc.Type.function(int_, [ptr(char)],True)
     printf = llvmc.Function.new(llvm_module,pfn,'printf')
 
-    int_printer = llvm_module.add_global_variable(array(char,12),'iprt')
-    int_printer.initializer = llvmc.GlobalVariable.stringz("Result: %i\n")
+    printer_strs = {}
+    printer_strs['Integer'] = llvm_module.add_global_variable(array(char,12),'iprt')
+    printer_strs['Integer'].initializer = llvmc.GlobalVariable.stringz("Result: %d\n")
     
+    printer_strs['Real'] = llvm_module.add_global_variable(array(char,12),'rprt')
+    printer_strs['Real'].initializer = llvmc.GlobalVariable.stringz("Result: %f\n")   
     ### LOCAL
 
     function_type = llvmc.Type.function(void,[])
@@ -68,7 +71,7 @@ def execute_method(llvm_module, method, args):
     bldr = llvmc.Builder.new(blok) 
 
     function_args = [] 
-    str_ptr = bldr.gep(int_printer,[llvm_int(0), llvm_int(0)])
+   
 
     for data, val in zip(sorted(method.req.slots,key=llvm_arg),args):
         function_args.append(llvm_constant(data.type, val))
@@ -80,6 +83,7 @@ def execute_method(llvm_module, method, args):
     bldr.call(method.ens.llvm_function,function_args + results)
     
     for result, data in zip(results,sorted(method.ens.slots,key=llvm_arg)):
+        str_ptr = bldr.gep(printer_strs[data.type.name],[llvm_int(0), llvm_int(0)])
         bldr.call(printf,[str_ptr, bldr.load(result)])
     
     bldr.ret_void()
@@ -111,7 +115,8 @@ def llvm_constant(fbml_type, value):
 def llvm_arg(data):
     return data.llvm_arg
 
-
+def source_data_in_order(method):
+    return sorted(method.req.slots,key=llvm_arg)
 
 class FunctionCodeBuilder (object):
 
