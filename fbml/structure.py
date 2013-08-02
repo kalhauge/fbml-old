@@ -56,6 +56,10 @@ class Label (object):
             
 class Namespace (object):
 
+    """
+    The namespace functions like a dictionary.
+    """
+
     def __init__(self,label):
         self._label = label
         self._children = dict() 

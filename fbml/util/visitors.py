@@ -67,7 +67,7 @@ class ControlFlowVisitor (object):
 
     def visit(self,method):
         if method in self._methods:
-            return method
+            return self._methods[method] 
         runorder = calculate_runorder(method.impl)
         result = self.setup(method)
         for function in runorder:

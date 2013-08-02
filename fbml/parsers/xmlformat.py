@@ -32,7 +32,9 @@ def write_impl(writer, value, root):
     remote_sinks = set(value.target_sinks) | set(value.source_sinks) 
 
     writer.write_objects('function',value.functions, impl)
-    writer.write_objects('sink',set(value.sinks) - remote_sinks, impl)
+
+    writer.write_objects('sink',value.internal_sinks.with_names, impl)
+    writer.write_objects('constant',value.constant_sinks.with_names, impl)
     writer.write_objects('target',value.target_sinks.with_names, impl)
     writer.write_objects('source',value.source_sinks.with_names, impl)
 
@@ -48,10 +50,13 @@ def write_slot(writer, value, root):
     slot.set('id',value[0])
     writer.write_object('data',value[1],slot)
 
-def write_sink(writer, value, root):
-    sink = ET.SubElement(root, 'sink')
-    sink.set('id', value.label.name)
-    writer.write_object('data',value.data,sink)
+def write_sink(name):
+    def writer(writer, value, root):
+        sink_id, sink_val = value
+        sink = ET.SubElement(root, name)
+        sink.set('id', sink_id)
+        writer.write_object('data',sink_val.data,sink)
+    return writer
 
 def write_import(writer, value, root):
     ET.SubElement(root,'import').text = repr(value.label)
@@ -104,7 +109,8 @@ class XMLWriter (object):
             'ensure'       : write_condition('ensure'),
             'slots'        : write_list('slots','slot'),
             'slot'         : write_slot,
-            'sink'         : write_sink,
+            'sink'         : write_sink('sink'),
+            'constant'     : write_sink('constant'),
             'source'       : write_remote('source'),
             'target'       : write_remote('target'),
             'map'          : write_map,
@@ -166,6 +172,7 @@ def parse_impl(parser, tree):
     impl = Impl(**tree.attrib)
     impl.functions = parser.parse_objects( tree, 'function')
     impl.sinks = parser.parse_objects( tree, 'sink')
+    impl.constants = parser.parse_objects( tree, 'constant')
     impl.targets = parser.parse_objects( tree, 'target')
     impl.sources = parser.parse_objects( tree, 'source')
     return impl
@@ -210,6 +217,7 @@ class XMLParser (object):
             'require'      : parse_ext_object(Condition,['slots']),
             'ensure'       : parse_ext_object(Condition,['slots']),
             'sink'         : parse_ext_object(Sink,[]),
+            'constant'     : parse_ext_object(Sink,[]),
             'slot'         : parse_ext_object(Slot,[]),
             'source'       : parse_object(RemoteSink,[]),
             'target'       : parse_object(RemoteSink,[]),

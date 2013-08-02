@@ -65,13 +65,13 @@ class FunctionCodeBuilder (object):
         self._setup()
 
     def _get_types(self):
-        types = [None] * ( len(self.source_index) + len(self.target_index) )
         impl = self.method.impl
-        for slot_id, sink in impl.source_sinks.with_names:
-            types[self.source_index[slot_id]] = llvm_type(sink.data.type)
-        for slot_id, sink in impl.target_sinks.with_names:
-            types[self.target_index[slot_id]] = \
-                    llvmc.Type.pointer(llvm_type(sink.data.type))
+        types = [None] * ( len(impl.source_sinks) + len(impl.target_sinks))
+        for data in self.method.req.slots:
+            types[data.llvm_arg] = llvm_type(data.type)
+
+        for data in self.method.ens.slots:
+            types[data.llvm_arg] = llvmc.Type.pointer(llvm_type(data.type))
         return types
 
 
@@ -80,37 +80,41 @@ class FunctionCodeBuilder (object):
         return dict((slot_id,index + start) for index,slot_id in indices )
 
     def _setup(self):
-        self.source_index = self._index_map(sorted(self.method.req.slots.names))
-        self.target_index = self._index_map(sorted(self.method.ens.slots.names),
-            len(self.method.req.slots))
-       
+
+        def assing_llvm_arg(pair):
+            index,(name, data) = pair
+            data.llvm_arg = index
+
+        [assing_llvm_arg(pair) for pair in enumerate(
+            sorted(self.method.req.slots.with_names,key=lambda x : x[0]) + 
+            sorted(self.method.ens.slots.with_names,key=lambda x : x[0])
+            )]
         args_types = self._get_types()
 
         self.llvm_function = llvmc.Function.new(
                 self.llvm_module,
                 llvmc.Type.function(llvmc.Type.void(),args_types),
-                self.method.label.name
+                self.method.req.method_name
                 )
 
         impl = self.method.impl
        
         for slot_id, sink in impl.source_sinks.with_names:
-            index = self.source_index[slot_id]
-            arg = self.llvm_function.args[index]
+            arg = self.llvm_function.args[sink.data.llvm_arg]
             arg.name = sink.label.name
             self.var[sink] = arg
 
         for slot_id, sink in impl.target_sinks.with_names:
-            index = self.target_index[slot_id]
-            arg = self.llvm_function.args[index]
+            arg = self.llvm_function.args[sink.data.llvm_arg]
             arg.name = sink.label.name
             self.var[sink] = arg
 
         blok = self.llvm_function.append_basic_block('entry')
         self.bldr = llvmc.Builder.new(blok) 
 
-    def ret_void(self):
+    def end(self):
         self.bldr.ret_void()
+        self.llvm_function.verify()
         return self
 
     @log_it(log.debug)
@@ -132,6 +136,40 @@ class FunctionCodeBuilder (object):
             self.var[ret_sink] = var
         return self
 
+    @log_it(log.debug)
+    def call(self, method, function):
+        
+        for slot, sink in function.targets.with_names:
+            # Test if sink is a target, do nothing
+            if not sink in self.var:
+                self.var[sink] = self.bldr.alloca(
+                        llvm_type(sink.data.type),sink.name)
+            
+
+        source_values = dict((slot, self.var[sink]) 
+                            for slot, sink in function.sources.with_names)
+        target_values = dict((slot, self.var[sink]) 
+                            for slot, sink in function.targets.with_names)
+
+        number_of_slots = len(method.req.slots)
+        number_of_slots += len(method.ens.slots)
+        args = [None] * number_of_slots
+        
+        for slot, data in method.req.slots.with_names:
+            args[data.llvm_arg] = source_values[slot]
+        
+        for slot, data in method.ens.slots.with_names:
+            args[data.llvm_arg] = target_values[slot]
+        
+        self.bldr.call(method.ens.llvm_function, args,'')
+
+        for sink in function.targets:
+            # Test if sink is target for method, ugly
+            if not hasattr(sink.data,'llvm_arg'):
+                ptr = self.var[sink] 
+                self.var[sink] = self.bldr.load(ptr,sink.name)
+        
+        return self
 
 
 class MethodCreater(visitors.ControlFlowVisitor):
@@ -145,7 +183,8 @@ class MethodCreater(visitors.ControlFlowVisitor):
         return FunctionCodeBuilder(self._llvm_module,method)
 
     def final(self,method,cb):
-        cb.ret_void()
+        cb.end()
+        method.ens.llvm_function = cb.llvm_function
         return cb.llvm_function
 
     def apply(self,function,cb):
@@ -166,8 +205,11 @@ class MethodCreater(visitors.ControlFlowVisitor):
                        )
 
         method = self._module.get_method_where(requirement)
-
-        return cb.call_buildin(method,function)
+        if hasattr(method.ens.data,'llvm'):
+            return cb.call_buildin(method,function)
+        else:
+            self.visit(method)
+            return cb.call(method,function)
         
 
 class LLVMExtension (Extension):

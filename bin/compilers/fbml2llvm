@@ -6,7 +6,8 @@ log = logging.getLogger("flow2llvm")
 
 import fbml
 from fbml.extensions.llvm import compile_to_llvm
-
+from fbml.extensions.llvm import llvm_type, FunctionCodeBuilder
+from llvm.ee import ExecutionEngine, GenericValue
 extensions = ['method_name','llvm', 'type']
 
 def main(args):

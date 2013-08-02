@@ -2,6 +2,37 @@
 <fbml version="0.0b">
     <import>stdlib</import>
 
+    <method id="main">
+        <require>
+            <method_name>main</method_name>
+            <slots/>
+        </require>
+        <ensure>
+            <slots>
+                <slot id="result" />
+            </slots>
+        </ensure>
+    </method>
+
+    <impl method_id="main">
+        <constant id="ten">
+            <type>Integer</type>
+            <value>10</value>
+        </constant>
+        <function id='f'>
+            <method_name>multiply_with_four</method_name>
+            <sources>
+                <map sink='ten' slot='in'/>
+            </sources>
+            <targets>
+                <map sink='e' slot='out'/>
+            </targets>
+        </function>
+        <target id="e" slot="result" />
+
+    </impl>
+
+
     <method id="multi-add">
         <!-- MultiAdd(a,b,c,d) : (a+b) + (c+d) -->
         <require>

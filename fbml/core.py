@@ -80,7 +80,9 @@ class Builder (object):
     def build_impl(self, label, tree):
         impl = model.Impl(label)
         for sink in tree.sinks:
-            impl.make_sink(sink.id,self.factory(sink,'sink'))
+            impl.make_internal_sink(sink.id,self.factory(sink,'internal_sink'))
+        for constant in tree.constants: 
+            impl.make_constant_sink(constant.id,self.factory(constant,'constant_sink'))
         for remote in tree.targets:
             impl.make_target_sink(remote.id,remote.slot,self.factory(remote,'target_sink'))
         for remote in tree.sources:
@@ -110,8 +112,13 @@ class Builder (object):
         sink.target = source_label 
         return sink
 
+    def build_constant_sink(self, constant_label, label, tree):
+        sink = model.Sink(label)
+        sink.target = constant_label 
+        self.assing_extends(tree, sink.data)
+        return sink
 
-    def build_sink(self, label, tree):
+    def build_internal_sink(self, internal_label, label, tree):
         sink = model.Sink(label)
         self.assing_extends(tree, sink.data)
         return sink
@@ -122,4 +129,9 @@ class Builder (object):
     def assing_extends(self, tree, obj):
         for name, data in vars(tree.data).items():
             setattr(obj,name,data)
+            try:
+                data.build(obj)
+            except AttributeError: 
+                # Build is not required
+                pass
         return obj

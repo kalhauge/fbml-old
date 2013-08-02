@@ -21,6 +21,15 @@ Method
 .. autoclass:: fbml.model.Method
     :members:
 
+Subnamespaces
+-------------
+
+.. attribute:: impl
+
+.. attribute:: res
+
+.. attribute:: ens
+
 
 Impl
 ====
@@ -28,11 +37,34 @@ Impl
 .. autoclass:: fbml.model.Impl
     :members:
 
+Subnamespaces
+-------------
+
+.. attribute:: sinks
+
+.. attribute:: functionss
+
+.. attribute:: source_sinks
+
+.. attribute:: target_sinks
+
+.. attribute:: constant_sinks 
+
+.. attribute:: internal_sinks 
+
 Function 
 ========
 
 .. autoclass:: fbml.model.Function
     :members:
+
+Subnamespaces
+-------------
+
+.. attribute:: sources
+
+
+.. attribute:: targets
 
 Sink
 ====
@@ -40,8 +72,30 @@ Sink
 .. autoclass:: fbml.model.Sink
     :members:
 
+Subnamespaces
+-------------
+
+.. attribute:: impl
+    
+    the implementaions in where the sink resides
+
+.. attribute:: target
+
+    The target is label explaining in where the sink resides. Sink that is Sources 
+    of the method, or if they are constants, they will have the Sink as parrent the
+    label.
+
+.. attribute:: owner 
+
+    Sould be used when wanting to access the owner of the sink, this can be
+    a :class:`~fbml.model.Function` or the :class:`~fbml.model.Impl`
 
 
+.. attribute:: data 
+    
+    This is the data coresponding with the sink. Like the other extendable classes
+    these data can be accesed directly through getting the attributes. If two attributes
+    colides, the Sinks native attributes gets first priority.
 """
 
 from functools import partial
@@ -52,6 +106,15 @@ from .structure import Namespace
 
 from .util import readonly
 from .util import exceptions
+
+class Extendable(object):
+
+    def __getattr__(self, name):
+        if hasattr(self.data,name):
+            return getattr(self.data,name)
+        else:
+            raise AttributeError('Could not find {!r} in object {!s}, or data'
+                    .format(name, self))
 
 class Method (Namespace):
     
@@ -84,7 +147,7 @@ class Method (Namespace):
         return '<method {m.label}>'.format(m=self)
 
 
-class Condition(Namespace):
+class Condition(Namespace, Extendable):
 
     """
     Condition is the testable aspeckt of the Method
@@ -126,6 +189,8 @@ class Impl (Namespace):
         self.functions = self.make('functions',Namespace)
         self.target_sinks = self.make('target_sinks',Namespace)
         self.source_sinks = self.make('source_sinks',Namespace)
+        self.constant_sinks = self.make('constant_sinks',Namespace)
+        self.internal_sinks = self.make('internal_sinks',Namespace)
 
     def make_sink(self, name, factory):
         return self.sinks.make(name, factory)
@@ -141,6 +206,14 @@ class Impl (Namespace):
         return self.source_sinks.make(slot, 
                 lambda label: self.make_sink(name,partial(factory,label)))
 
+    def make_constant_sink(self, name, factory):
+        return self.constant_sinks.make(name, 
+                lambda label: self.make_sink(name,partial(factory,label)))
+
+    def make_internal_sink(self, name, factory):
+        return self.internal_sinks.make(name, 
+                lambda label: self.make_sink(name,partial(factory,label)))
+    
     @property
     def method(self):
         return self.parrent
@@ -152,7 +225,7 @@ class Impl (Namespace):
         return "<impl '{s.parrent.label.name}'>".format(s=self)
 
 
-class Function (Namespace):
+class Function (Namespace, Extendable):
     
     """
     A Function is the method call of fbml. It is posible to
@@ -192,21 +265,11 @@ class Function (Namespace):
         return helper[self]
 
 
-class Sink (Namespace):
+class Sink (Namespace, Extendable):
     
     """
     The sink contains the esential data for execution of the program and
     is the combiner of functions
-
-    .. attribute:: impl
-        
-        the implementaions in where the sink resides
-    
-    .. attribute:: owner 
-
-        Sould be used when wanting to access the owner of the sink, this can be
-        a :class:`~fbml.model.Function` or the :class:`~fbml.model.Impl`
-
     """
 
     def __init__(self, label):
@@ -237,4 +300,7 @@ class Data(object):
         if not name_list:
             return self
         else:
-            raise Exception('Badd access to {}'.format(name_list))
+            raise Exception('Bad access to {}'.format(name_list))
+
+
+

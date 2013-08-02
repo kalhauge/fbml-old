@@ -56,12 +56,8 @@ class has_types (matchers.Matcher):
         description.append("has sources matching the pathern {}".format(self.types))
 
 class Type (object):
-    _buildin_types = {
-            'Any',
-            'Integer',
-            'Real',
-            'Char'
-            }
+    
+    _buildin_types = dict()
 
     def __init__(self, name):
         self.name = name
@@ -81,6 +77,34 @@ class Type (object):
     def __repr__(self):
         return "<type {}>".format(self.name)
 
+    def parse_str(self, string):
+        raise NotImplemented()
+
+    def write_str(self, value):
+        raise str(value) 
+
+class IntegerType (Type):
+
+    def parse_str(self, string):
+        return int(string)
+
+class CharType (Type):
+
+    def parse_str(self, string):
+        return string[0]
+
+class RealType (Type):
+
+    def parse_str(self, string):
+        return float(string)
+
+
+Type._buildin_types = {
+        'Integer' : IntegerType,
+        'Char'    : CharType,
+        'Real'    : RealType
+        }
+
 class TypeSetter (visitors.DataFlowVisitor):
 
     def __init__(self,module):
@@ -88,7 +112,8 @@ class TypeSetter (visitors.DataFlowVisitor):
         self.module = module
 
     def setup(self,method):
-        return ((sink, sink.data.type) for sink in method.impl.source_sinks)
+        return ([(sink, sink.type) for sink in method.impl.source_sinks] +
+                [(sink, sink.type) for sink in method.impl.constant_sinks])
 
     def apply(self,function,sink_types):
 
