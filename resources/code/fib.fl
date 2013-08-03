@@ -1,79 +1,139 @@
 <?xml version="1.0"?>
-<fbml version="0.0">
-    
+<fbml version="0.0b">
+    <import>stdlib</import> 
     <method id="fib-zero-one">
-        <require name="method_name">Fibonacci</require>
-        <require name="sources">
-            <source slot="0" id="a" />
+        <!-- fibonacci(in : {0,1}) : in -->
+        <require>
+            <method_name>fibonacci</method_name>
+            <slots>
+                <slot id="in">
+                    <type>Integer</type>
+                    <value opr='in_set'>
+                        <value>0</value>
+                        <value>1</value>
+                    </value>
+                </slot>
+            </slots>
         </require>
-        <ensure name="sinks">
-            <sink slot="0" id="b" />
+        <ensure>
+            <slots>
+                <slot id="out">
+                </slot>
+            </slots>
         </ensure>
     </method>
+    
+    <method id="fib-other">
+        <!-- fibonacci(in : > 1) : fibonacci(in - 1) + fibonacci(in - 2) --> 
+        <require>
+            <method_name>fibonacci</method_name>
+            <slots>
+                <slot id="in">
+                    <type>Integer</type>
+                    <value opr='lt'>
+                        <value>1</value>
+                    </value>
+                </slot>
+            </slots>
+        </require>
+        <ensure>
+            <slots>
+                <slot id="out">
+                </slot>
+            </slots>
+        </ensure>
+    </method>
+
 
     <impl method_id="fib-zero-one">
-        <function id="f1">
-            <extend name="method_name">DoNothing</extend>
-            <source slot="0" sink_id="a" />
-            <sink slot="0" id="b" />
+        <source id='a' slot='in'/>
+        <function id='f1'>
+            <method_name>do_nothing</method_name>
+            <sources>
+                <map sink='a' slot='in'/>
+            </sources>
+            <targets>
+                <map sink='b' slot='out'/>
+            </targets>
         </function>
+        <target id='b' slot='out'/>  
     </impl>
-
-    <method id="fib-other">
-        <require name="method_name">Fibonacci</require>
-        <require name="sources">
-            <source slot="0" id="a" />
-        </require>
-        <ensure name="sinks">
-            <sink slot="0" id="b" />
-        </ensure>
-    </method>
 
     <impl method_id="fib-other">
 
+        <source id='in' slot='in' />
+
+        <constant id='c1'>
+            <type>Integer</type>
+            <value>1</value>
+        </constant> 
+
+        <constant id='c2'>
+            <type>Integer</type>
+            <value>2</value>
+        </constant> 
+
+        <sink id='n1' />
+        <sink id='n2' />
+
+        <sink id='f1' />
+        <sink id='f2' />
+        
+
         <function id="f1">
-            <extend name="method_name">Constant</extend>
-            <sink slot="0" id="c1" />
+            <method_name>sub</method_name>
+            <sources>
+                <map sink='in' slot='a'/>
+                <map sink='c1' slot='b'/>
+            </sources>
+            <targets>
+                <map sink='n1' slot='c'/>
+            </targets>
         </function>
 
         <function id="f2">
-            <extend name="method_name">Constant</extend>
-            <sink slot="0" id="c2" />
+            <method_name>sub</method_name>
+            <sources>
+                <map sink='in' slot='a'/>
+                <map sink='c2' slot='b'/>
+            </sources>
+            <targets>
+                <map sink='n2' slot='c'/>
+            </targets>
         </function>
 
         <function id="f3">
-            <extend name="method_name">Substract</extend>
-            <source slot="0" sink_id="a" />
-            <source slot="1" sink_id="c1" />
-            <sink slot="0" id="n1" />
+            <method_name>fibonacci</method_name>
+            <sources>
+                <map sink='n1' slot='in'/>
+            </sources>
+            <targets>
+                <map sink='f1' slot='out'/>
+            </targets>
         </function>
 
         <function id="f4">
-            <extend name="method_name">Substract</extend>
-            <source slot="0" sink_id="a" />
-            <source slot="1" sink_id="c2" />
-            <sink slot="0" id="n2" />
+            <method_name>fibonacci</method_name>
+            <sources>
+                <map sink='n2' slot='in'/>
+            </sources>
+            <targets>
+                <map sink='f2' slot='out'/>
+            </targets>
         </function>
 
         <function id="f5">
-            <extend name="method_name">Fibonacci</extend>
-            <source slot="0" sink_id="n1" />
-            <sink slot="0" id="f_1" />
+            <method_name>add</method_name>
+            <sources>
+                <map sink='f1' slot='a'/>
+                <map sink='f2' slot='b'/>
+            </sources>
+            <targets>
+                <map sink='out' slot='c'/>
+            </targets>
         </function>
 
-        <function id="f6">
-            <extend name="method_name">Fibonacci</extend>
-            <source slot="0" sink_id="n2" />
-            <sink slot="0" id="f_2" />
-        </function>
-
-        <function id="f7">
-            <extend name="method_name">Add</extend>
-            <source slot="0" sink_id="f_1" />
-            <source slot="1" sink_id="f_2" />
-            <sink slot="0" id="b" />
-        </function>
-
+        <target id='out' slot='out' />
     </impl>
 
 </fbml>

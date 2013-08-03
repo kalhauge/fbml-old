@@ -296,10 +296,9 @@ class Data(object):
     """ The extendable data object """
 
     def find_from_name_list(self, name_list):
-        if not name_list:
-            return self
+        if not name_list:return self
         else:
-            raise Exception('Bad access to {}'.format(name_list))
+            raise exceptions.BadLabelAccess('Bad access to {}'.format(name_list))
 
 
 

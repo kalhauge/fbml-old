@@ -82,7 +82,7 @@ class Namespace (object):
         if not name_list: return self.label
         try:
             subpackage = self.find(name_list[0])
-        except KeyError:
+        except exceptions.BadLabelAccess:
             log.debug("Subpackage %s not found, try to create",
                     name_list[0])
             subpackage = self.make(name_list[0],factory)
@@ -94,7 +94,10 @@ class Namespace (object):
         Returns a local attribute from a name.
         :param name: the name of the attribute
         """
-        return self.children[name]
+        try:
+            return self.children[name]
+        except KeyError:
+            raise exceptions.BadLabelAccess(self,name)
 
     def find_from_name_list(self, name_list):
         """ Returns the label, by searching through the structure tree
@@ -122,7 +125,7 @@ class Namespace (object):
         """
         child_label = Label(name,self)
         if name in self._children:
-            raise KeyError(name + " already in children: " + str(child_label.get()))
+            raise exceptions.BadLabelCreation(self,name)
         self._children[child_label.name] = child_factory(child_label)
         return child_label.get() 
 

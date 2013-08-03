@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<!DOCTYPE fbml SYSTEM "../doctypes/fbml-noext.dtd">
 <fbml version="0.0b">
     <method id="add-integer">
         <require>
@@ -25,7 +24,21 @@
         </ensure>
     </method>
 
+    <method id="do-nothing">
+        <require>
+            <slots>
+                <slot id="in" />
+            </slots>
+        </require>
+        <ensure>
+            <slots>
+                <slot id="out" />
+            </slots>
+        </ensure>
+    </method>
+
     <method id="add-real">
+        <type>Integer</type>
         <require>
             <method_name>add</method_name>
             <slots>

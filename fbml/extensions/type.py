@@ -7,7 +7,7 @@ from ..parsers import xmlformat
 import xml.etree.ElementTree as ET
 
 
-class TypeDoesNotExist(exceptions.MallformedFlowError):
+class TypeDoesNotExist(exceptions.MallformedFbml):
     """ TypeDoesNotExist is thrown if a type does not exist"""
 
 class TypeFormat(object):
@@ -41,8 +41,8 @@ def check(function):
 def could_be(type_,method,slot):
     try:
         return type_ == method.req.slots[slot].type
-    except KeyError:
-        return False
+    except AttributeError: return False
+    except exceptions.BadLabelAccess: return False
 
 class has_types (matchers.Matcher):
 
