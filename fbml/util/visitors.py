@@ -46,7 +46,7 @@ class DataFlowVisitor (object):
 
     def apply(self,function,sinks):
         """
-        For each function take the sources and retrun the sinks
+        For each function take the sources and return the sinks
         the sources are slot oriented. The output sinks should orderd in 
         a dict.
         """
