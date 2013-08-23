@@ -1,5 +1,5 @@
 """
-.. module:: fbml.model
+.. currentmodule:: fbml.model
 .. moduleauthor:: Christian Gram Kalhauge <s093273@student.dtu.dk>
 
 =====
@@ -42,7 +42,7 @@ Subnamespaces
 
 .. attribute:: sinks
 
-.. attribute:: functionss
+.. attribute:: functions
 
 .. attribute:: source_sinks
 
@@ -63,7 +63,6 @@ Subnamespaces
 
 .. attribute:: sources
 
-
 .. attribute:: targets
 
 Sink
@@ -81,7 +80,7 @@ Subnamespaces
 
 .. attribute:: target
 
-    The target is label explaining in where the sink resides. Sink that is Sources 
+    The target is label explaining in where the sink resides. Sink that is source
     of the method, or if they are constants, they will have the Sink as parrent the
     label.
 
