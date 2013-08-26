@@ -5,6 +5,7 @@
 
 
 """
+from operator import itemgetter
 import os
 import logging
 log = logging.getLogger('fbml2dot')
@@ -21,7 +22,7 @@ def main(args):
     method_to_dot(method, args.outfile)
     return 0
 
-def id_(obj): return obj.label.name
+def id_(obj): return obj.data.id
 
 
 def method_to_dot(method, filelike):
@@ -41,7 +42,7 @@ class DotVisitor (fbml.ControlFlowVisitor):
         """
         dotlines = []
         dotlines.append('"{}" [label="{}"]'.format(
-                id_(method.impl),
+                method.label.name,
                 self.function_to_dot_label(
                     [],
                     method.impl.source_sinks,
@@ -49,6 +50,8 @@ class DotVisitor (fbml.ControlFlowVisitor):
                     )
                 )
             )
+        self.method =method
+        self.impl = method.impl
         return dotlines 
 
     def final(self,method,dotlines):
@@ -61,18 +64,22 @@ class DotVisitor (fbml.ControlFlowVisitor):
 
     def apply(self,function,dotlines):
         function_str= '{} [label="{}"];'.format(
-            function.label.name,
+            function.data.id,
             self.function_to_dot_label(
                 function.sources, 
-                function.targets,
+                map(itemgetter(1),list(self.impl.functions_with_targets([function]))[0][1]),
                 function.data.method_name
                 )
             )
         
         connections = []
         for sink in function.sources:
+            if sink.owner:
+                o = id_(sink.owner)
+            else:
+                o = self.method.label.name
             con = '"{}":{} -> "{}":{};'.format(
-                    id_(sink.owner),
+                    o,
                     id_(sink),
                     id_(function),
                     id_(sink)

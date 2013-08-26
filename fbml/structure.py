@@ -110,7 +110,13 @@ class Namespace (object):
         if not name_list: 
             return self
         else:
-            return self.find(name_list[0]).find_from_name_list(name_list[1:]) 
+            child = self.find(name_list[0])
+            try:
+                return child.find_from_name_list(name_list[1:]) 
+            except AttributeError:
+                if not name_list[1:]: return child
+                raise Exception('Could non find {name_list} in {self}'
+                        .format(**locals()))
 
     def to_name_list(self):
         """ returns the name list of the package """

@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 import logging
 log = logging.getLogger(__name__)
 
-from ..util import exceptions
+from fbml.util import exceptions
 from .. import model
 from .parser import *
 
@@ -23,39 +23,39 @@ def write_method(writer, value, root):
     method.set('id',value.label.name) 
     writer.write_object('require', value.req, method)
     writer.write_object('ensure', value.ens, method)
-    writer.write_object('impl', value.impl, root)
+    writer.write_object('impl', (value, value.impl), root)
 
 def write_impl(writer, value, root):
+    method, value = value
     impl = ET.SubElement(root, 'impl')
-    impl.set('method_id',value.method.label.name)
+    impl.set('method_id',method.label.name)
 
-    remote_sinks = set(value.target_sinks) | set(value.source_sinks) 
+    writer.write_objects('function',
+            value.functions_with_targets(value.functions), impl)
 
-    writer.write_objects('function',value.functions, impl)
-
-    writer.write_objects('sink',value.internal_sinks.with_names, impl)
-    writer.write_objects('constant',value.constant_sinks.with_names, impl)
-    writer.write_objects('target',value.target_sinks.with_names, impl)
-    writer.write_objects('source',value.source_sinks.with_names, impl)
+    writer.write_objects('sink',value.internal_sinks, impl)
+    writer.write_objects('constant',value.constant_sinks, impl)
+    writer.write_objects('target',value.target_sinks, impl)
+    writer.write_objects('source',value.source_sinks, impl)
 
 def write_function(writer, value, root):
+    value, targets = value
     func = ET.SubElement(root, 'function')
-    func.set('id', value.label.name)
+    func.set('id',value.data.id) 
     writer.write_object('data',value.data, func)
-    writer.write_object('sources',value.sources.with_names, func)
-    writer.write_object('targets',value.targets.with_names, func)
+    writer.write_object('sources',vars(value.sources).items(), func)
+    writer.write_object('targets',targets, func)
 
 def write_slot(writer, value, root):
     slot = ET.SubElement(root, 'slot')
-    slot.set('id',value[0])
+    slot.set('id',value[0]) 
     writer.write_object('data',value[1],slot)
 
 def write_sink(name):
     def writer(writer, value, root):
-        sink_id, sink_val = value
         sink = ET.SubElement(root, name)
-        sink.set('id', sink_id)
-        writer.write_object('data',sink_val.data,sink)
+        sink.set('id',value.data.id) 
+        writer.write_object('data',value.data,sink)
     return writer
 
 def write_import(writer, value, root):
@@ -78,19 +78,24 @@ def write_list(name, subname):
 def write_map(writer, value, root):
     (slot, sink) = value
     map_ = ET.SubElement(root,'map')
-    map_.set('sink', sink.label.name)
+    map_.set('sink', sink.data.id)
     map_.set('slot', slot)
 
 def write_remote(name):
     def writer(writer, value, root):
         r_sink = ET.SubElement(root,name)
-        r_sink.set('id',value[1].label.name)
-        r_sink.set('slot',value[0])
+        r_sink.set('id',value.data.id)
+        r_sink.set('slot',value.data.slot)
     return writer
 
 def write_data(writer, value, root):
     for n, v in vars(value).items():
         writer.write_object(n,v,root)
+
+def write_str(name):
+    def writer(writer, value, root):
+        ET.SubElement(root,name).text = value
+    return writer
 
 def write_std(writer, value, root):
     log.debug('Writer encountered an unknow value {}'.format(value))
@@ -115,6 +120,7 @@ class XMLWriter (object):
             'target'       : write_remote('target'),
             'map'          : write_map,
             'data'         : write_data, 
+            'id'           : write_str('id')
             }
 
     def __init__(self, extend_formats):
@@ -182,8 +188,10 @@ def parse_ext_object(cls,required):
         obj = cls(**tree.attrib)
         for name in required:
             setattr(obj,name,parser.parse_object_from_name(tree, name))
-        obj.data = Data()
-        parser.parse_rest(tree,obj.data,required)
+        obj.data = dict(tree.attrib)
+        o = Data()
+        parser.parse_rest(tree,o,required)
+        obj.data.update(vars(o))
         return obj
     return parse_obj
 
@@ -226,6 +234,7 @@ class XMLParser (object):
             'sources'      : parse_list('map'),
             'slots'        : parse_list('slot'),
             'import'       : parse_text,
+            'id'           : parse_text,
             }
 
     def __init__(self,extend_formats):

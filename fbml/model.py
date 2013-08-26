@@ -130,17 +130,14 @@ class Method (Namespace):
         effect of running the method.
     """
 
-    def __init__(self, label):
+    def __init__(self, label, impl = None):
         super(Method,self).__init__(label)
+        self.impl = impl
 
     def make_condition(self, name, factory):
         res = self.make(name,factory)
         setattr(self,name,res)
         return res 
-
-    def make_impl(self, factory):
-        self.impl = self.make('impl',factory)
-        return self.impl
 
     def __repr__(self):
         return '<method {m.label}>'.format(m=self)

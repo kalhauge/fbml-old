@@ -7,7 +7,7 @@ from ..parsers import xmlformat
 import xml.etree.ElementTree as ET
 
 
-class TypeDoesNotExist(exceptions.MallformedFbml):
+class TypeDoesNotExist(exceptions.MallformedFlowError):
     """ TypeDoesNotExist is thrown if a type does not exist"""
 
 class TypeFormat(object):

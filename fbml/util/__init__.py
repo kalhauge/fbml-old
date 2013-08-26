@@ -26,9 +26,12 @@ class Immutable(object):
 
     def __init__(self,**kwargs):
         self.__dict__.update(kwargs)
+        self.__dict__['_hash'] = hash(self)
 
     def __hash__(self):
-        return hash(tuple(sorted(vars(self)))) 
+        if not hasattr(self,'_hash'):
+            return hash(tuple(sorted(vars(self)))) 
+        else: return self._hash
 
     def __eq__(self,other):
         return vars(self) == vars(other)

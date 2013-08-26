@@ -1,16 +1,22 @@
 """
-.. module: fbml.core 
+.. currentmodule: fbml.core 
     :platform: Unix
     :synopsis: The dataflow.module module. This is used for all assosiations.
 .. moduleauthor: Christian Gram Kalhauge
 
 """
 from functools import partial 
+from itertools import chain, starmap
+from collections import deque
+
 import os
 import sys
+
 import logging
 log = logging.getLogger(__name__)
 
+from . import element
+from . import util
 from . import model
 from . import structure
 from .util import exceptions
@@ -60,7 +66,7 @@ class Builder (object):
             module.make_method(method.id,self.factory(method,'method'))
         for impl in module_tree.impls:
             method = module[impl.method_id]
-            method.make_impl(self.factory(impl,'impl'))
+            method.impl = self.build_impl(method,impl)
         return module
 
     def build_method(self, label, tree):
@@ -73,75 +79,94 @@ class Builder (object):
         condition = model.Condition(label)
         for slot in tree.slots:
             def build_slot(label):
-                slottmp = model.Extendable()
-                slottmp.data = model.Data()
-                self.assing_extends(slot, slottmp)
-                return slottmp.data 
+                return util.namedtuple_from_dict('Slot', slot.data)
             condition.make_slot(slot.id, build_slot)
         self.assing_extends(tree,condition)
         return condition
 
-    def build_impl(self, label, tree):
-        impl = model.Impl(label)
-        for sink in tree.sinks:
-            impl.make_internal_sink(sink.id,self.factory(sink,'internal_sink'))
-        for constant in tree.constants: 
-            impl.make_constant_sink(constant.id,self.factory(constant,'constant_sink'))
-        for remote in tree.targets:
-            impl.make_target_sink(remote.id,remote.slot,self.factory(remote,'target_sink'))
-        for remote in tree.sources:
-            impl.make_source_sink(remote.id,remote.slot, self.factory(remote,'source_sink'))
-        for function in tree.functions:
-            impl.make_function(function.id,self.factory(function,'function'))
-        return impl
 
-    def build_function(self, label, tree):
-        function = model.Function(label)
-        for map_ in tree.sources:
-            sink = function.impl.sinks[map_.sink]
-            function.make_source(map_.slot,function.impl.sinks[map_.sink])
-        for map_ in tree.targets:
-            function.make_target(map_.slot,function.impl.sinks[map_.sink])
-        self.assing_extends(tree,function)
-        return function
+    def build_impl(self, method, tree):
+        start_sinks = dict(
+                map (
+                    lambda x: (x.data.id,x), 
+                    chain(
+                        map(partial(self.build_source_sink,method),tree.sources), 
+                        map(self.build_constant_sink, tree.constants)
+                        )
+                    )
+                )
+        sinks = dict(start_sinks)
+        functions = dict()
+        sink_builders = {s.data['id'] : partial(self.build_internal_sink,s.data)
+                for s in tree.sinks}
 
-    def build_target_sink(self, target_label, label, tree):
-        sink = model.Sink(label)
-        sink.data = sink.impl.method.ens.slots[tree.slot]
-        return sink
+        sink_builders.update((s.id,
+            partial(self.build_target_sink,
+                dict(
+                    chain(
+                        vars(method.ens.slots[s.slot]).items(),
+                        (('id',s.id),('slot',s.slot))
+                        )
+                    )
+            )) for s in tree.targets)
 
-    def build_source_sink(self, source_label, label, tree):
-        sink = model.Sink(label)
-        sink.data = sink.impl.method.req.slots[tree.slot]
-        sink.target = source_label 
-        return sink
+        function_descriptions, next_functions = [], list(tree.functions)
+        while next_functions:
+            function_descriptions, next_functions = next_functions, []
+            improved = False
+            for fun in function_descriptions:
+                function = self.build_function(sinks,fun)
+                if function:
+                    functions[fun.data['id']] = function
+                    try:
+                        targets = [ sink_builders[target.sink](function, target.slot)
+                                for target in fun.targets]
+                    except KeyError as e:
+                        raise exceptions.MallformedFlowError(
+                                'Could not find {e} in sinks'.format(**locals()))
+                    sinks.update((x.data.id, x) for x in targets)
+                    improved = True
+                else:
+                    next_functions.append(fun)
+            if not improved:
+                raise Exception("Bad formatted fbml: functions missing sinks {}".format(
+                        list(map(lambda x : x.data['id'],
+                             next_functions))))
+    
+        target_sinks = {target.slot: sinks[target.id] for target in tree.targets }
 
-    def build_constant_sink(self, constant_label, label, tree):
-        sink = model.Sink(label)
-        sink.target = constant_label 
-        self.assing_extends(tree, sink)
-        return sink
+        return element.Impl.new(target_sinks)
 
-    def build_internal_sink(self, internal_label, label, tree):
-        sink = model.Sink(label)
-        self.assing_extends(tree, sink)
-        return sink
+    def build_function(self, sinks, tree):
+        try: 
+            sources = {s.slot : sinks[s.sink] for s in tree.sources}
+        except KeyError as e:
+            return None
+        else:
+            return element.Function.new(sources,tree.data)
+        
+    def build_internal_sink(self, data, function, slot):
+        return element.Internal.new(element.Target(function,slot), data)
+
+    def build_target_sink(self, data, function, slot):
+        return element.Sink.new(element.Target(function,slot), data)
+
+    def build_source_sink(self, method, tree):
+        return element.Source.new(tree.slot,
+                dict(
+                    chain(
+                        vars(method.req.slots[tree.slot]).items(),
+                        [('id',tree.id),('slot',tree.slot)]
+                        )
+                    )
+                )
+
+    def build_constant_sink(self, tree):
+        return element.Constant.new(tree.data)
 
     def factory(self, tree, name):
         return partial(getattr(self,'build_'+name),tree = tree)
 
     def assing_extends(self, tree, obj):
-        for name, data in vars(tree.data).items():
-            setattr(obj.data,name,data)
-        values = {} 
-        
-        for name, data in vars(obj.data).items():
-            try: 
-                values[name] = data.build(obj)
-            except AttributeError as e:
-                log.debug('No build face for %s; %s',name,e) 
-        
-        for name, data in values.items():
-            setattr(obj.data,name,data)
-        
+        obj.data = util.namedtuple_from_dict("Data", tree.data)
         return obj
