@@ -17,7 +17,7 @@ class AmbiguousMethodCall(FbmlError):
 
 class NoMethodCall(FbmlError):
 
-    def __init__(self,condition):
+    def __init__(self,methods):
         super(NoMethodCall,self).__init__(
-                "No methods found for call on condition: {}".format(condition))
+                "No methods found for call in {}".format(methods))
 

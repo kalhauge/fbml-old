@@ -26,6 +26,7 @@
 
     <method id="do-nothing">
         <require>
+            <method_name>do_nothing</method_name>
             <slots>
                 <slot id="in" />
             </slots>

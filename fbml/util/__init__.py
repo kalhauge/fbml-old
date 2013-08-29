@@ -18,7 +18,7 @@ class Immutable(object):
     def __repr__(self):
         return (self.__class__.__name__ 
         + '(' + ', '.join(str(k) + "=" + repr(v) for k, v 
-                    in vars(self).items()) + ')'
+                    in self.items()) + ')'
                 )
 
     def __setattr__(self,name,value):
@@ -30,11 +30,15 @@ class Immutable(object):
 
     def __hash__(self):
         if not hasattr(self,'_hash'):
-            return hash(tuple(sorted(vars(self)))) 
+            return hash(tuple(sorted(self.items()))) 
         else: return self._hash
 
+    def items(self):
+        return ((k,v) for k, v in vars(self).items() 
+                    if not k.startswith('_'))
+
     def __eq__(self,other):
-        return vars(self) == vars(other)
+        return tuple(sorted(self.items())) == tuple(sorted(other.items()))
 
 def namedtuple_from_dict(name, d):
     return namedtuple(name,list(d))(**d)

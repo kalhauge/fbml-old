@@ -6,11 +6,20 @@ log = logging.getLogger("flow2llvm")
 
 import fbml
 from fbml.extensions.llvm import compile_to_llvm, add_main, source_data_in_order 
-from fbml.extensions.methodname import has_method_name
+from fbml.extensions.methodname import generate_find_method_calls
 
 extensions = ['method_name','llvm', 'type', 'value']
 
 def main(args):
+
+    find_method_calls = generate_find_method_calls(args.module)
+    find_types = generate_find_types(args.module)
+
+    for method in args.module.methods:
+
+        
+
+
     llvm_module = compile_to_llvm(args.module)
     if args.run_method:
         method_name, args_list = args.run_method

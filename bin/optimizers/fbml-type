@@ -10,6 +10,7 @@ import os
 
 import fbml
 import fbml.extensions.type as typeext
+import fbml.extensions.methodname as methodext
 
 import logging
 log = logging.getLogger('fbml-type')
@@ -17,10 +18,12 @@ log = logging.getLogger('fbml-type')
 extensions = ['method_name','type'] 
 
 def main(args):
-   
-    visiter = typeext.TypeSetter(args.module)
+  
+    find_method_calls = methodext.generate_find_method_calls(args.module)
+    find_types = typeext.generate_find_types(args.module)
     def type_methods(method):
-        return visiter.visit(method)
+        method = find_method_calls(method)
+        return method
 
     methods = [type_methods(method) for method in args.module.methods]
    

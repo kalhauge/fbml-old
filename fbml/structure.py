@@ -7,7 +7,8 @@ Structure
 =====
 
 """
-
+from itertools import chain
+from operator import attrgetter
 import os
 
 import logging
@@ -52,6 +53,14 @@ class Label (object):
         """
         name_list = label_string.split('.')
         return root_package.find_or_make(name_list,factory).label
+
+    @staticmethod
+    def find(label_string, package):
+        name_list = label_string.split('.')
+        try:
+            return package.find_from_name_list(name_list)
+        except exceptions.BadLabelAccess:
+            return package.root().find_from_name_list(name_list)
 
             
 class Namespace (object):
@@ -159,6 +168,15 @@ class Namespace (object):
     def __repr__(self):
         return repr(self.label)
 
+    def root(self):
+        return self.parrent.root()
+    
+    def __contains__ (self, value):
+        try: self.find(value)
+        except BadLabelAccess:
+            return False
+        else: return True
+
 class Package (Namespace):
     """
     Package is the core of the package system. A package unless if
@@ -204,6 +222,9 @@ class RootPackage (Package):
     def to_name_list(self):
         return []
 
+    def root(self):
+        return self
+
     def __repr__(self):
         return 'root'
 
@@ -224,6 +245,11 @@ class Module (Package):
     @property
     def methods(self):
         return self
+
+    @property
+    def reachable_methods(self):
+        import_methods = chain.from_iterable(map(attrgetter('reachable_methods'),self.imports))
+        return chain(self, import_methods)
 
     def make_method(self, name, factory):
         return self.make(name, factory) 

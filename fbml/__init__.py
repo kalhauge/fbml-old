@@ -6,6 +6,8 @@
 .. moduleauthor: Christian Gram Kalhauge
 """
 
+import os 
+
 class MallformedFlowError (Exception) : pass
 
 import logging
@@ -61,7 +63,8 @@ def import_module(modulename,extension=None,paths=None):
     :param paths: extra search paths beound the $FBMLPATH.
     :returns: A :class:`~fbml.model.Module`
     """
-
+    if not paths: 
+        paths = []
     paths.append(os.getcwd())
     
     from . import core 

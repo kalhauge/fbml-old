@@ -3,7 +3,7 @@
 .. moduleauthor:: Christian Gram Kalhauge
 
 """
-
+import pprint
 from collections import namedtuple, deque
 
 import logging
@@ -13,8 +13,7 @@ from fbml.util import Immutable, namedtuple_from_dict
 
 from operator import attrgetter
 
-Target = namedtuple('Target', ['function', 'slot'])
-Source = namedtuple('Source', ['sink', 'slot'])
+From = namedtuple('From', ['function', 'slot'])
 
 
 class Element(Immutable):
@@ -27,12 +26,16 @@ class Sink (Element):
         Immutable.__init__(**locals())
 
     @classmethod
-    def new(cls, target, data):
+    def new(cls, target, data={}):
         return cls(target, namedtuple_from_dict("Data", data))
 
     @property
     def owner(self):
         return self.target.function
+    
+    @property
+    def slot(self):
+        return self.target.slot
 
     def depth(self, helper):
         if not self in helper:
@@ -40,7 +43,13 @@ class Sink (Element):
         return helper[self]
 
     def __str__(self):
-        return 'Sink : {self.data.id!r} at {self.owner.data.id!r}'.format(**locals())
+        return 'Sink : {self.data.id!r} at \n{self.owner!s}'.format(**locals())
+
+    def update_data(self, function, data={}):
+        new_data = dict(vars(self.data))
+        new_data.update(data)
+        return self.new(From(function,self.slot),new_data)
+
 
 class Internal(Sink): pass
 
@@ -50,7 +59,7 @@ class Source(Sink):
         Immutable.__init__(**locals())
    
     @classmethod
-    def new(cls, slot, data):
+    def new(cls, slot, data={}):
         return cls(
                 slot = slot,
                 data = namedtuple_from_dict("Data", data)
@@ -60,11 +69,15 @@ class Source(Sink):
     def owner(self):
         return None 
 
+    @property
+    def slot(self):
+        return self.__dict__['slot']
+
     def depth(self, helper): 
         return 0
 
     def __str__(self):
-        return 'Source : {self.data.id!r} at {self.data.slot!r}'.format(**locals())
+        return 'Source : {self.data.id!r} at {self.slot!r}'.format(**locals())
 
 class Constant(Sink):
 
@@ -72,7 +85,7 @@ class Constant(Sink):
         Immutable.__init__(**locals())
    
     @classmethod
-    def new(cls, data):
+    def new(cls, data={}):
         return cls(
                 data = namedtuple_from_dict("Data", data)
                 )
@@ -87,13 +100,15 @@ class Constant(Sink):
     def __str__(self):
         return 'Constant : {self.data.id!r}'.format(**locals())
 
+class Target(Sink): pass
+
 class Function (Element):
 
     def __init__(self, sources, data):
         Immutable.__init__(**locals())
 
     @classmethod
-    def new(cls, sources, data):
+    def new(cls, sources, data={}):
         return cls(
                 sources = namedtuple_from_dict("Sources", sources),
                 data = namedtuple_from_dict("Data", data)
@@ -108,12 +123,13 @@ class Function (Element):
         return helper[self]
 
     def __str__(self):
-        return 'Function : {self.data.id!r}'.format(**locals())
+        return 'Function'
 
-    def update_data(self, sink_data, data):
-        new_data = dict(vars(self.data))
+    def update_data(self, sink_data, data={}):
+        new_data = dict(vars(self.data).items())
         new_data.update(data)
-        return Function.new((sink_data[sink] for sink in self.sources), new_data)
+        new_sinks = {slot: sink_data[sink] for slot, sink in vars(self.sources).items()}
+        return Function.new(new_sinks, new_data)
 
 def _get_sinks_of_type(sink_type):
     def get_sinks(self):
@@ -126,7 +142,7 @@ class Impl (Immutable):
         Immutable.__init__(**locals())
 
     @classmethod
-    def new (cls, target_sinks):
+    def new(cls, target_sinks):
         target_sinks = namedtuple_from_dict('Targets',target_sinks)
         sinks, functions = Impl._calculate_reach(target_sinks)
         return cls(
@@ -163,5 +179,7 @@ class Impl (Immutable):
     source_sinks = property(_get_sinks_of_type(Source))
     target_sinks = property(attrgetter('targets'))
 
-
-
+    def update_data(self, sink_data):
+        new_sinks = {slot: sink_data[sink] 
+                for slot, sink in vars(self.targets).items()}
+        return Impl.new(new_sinks)
