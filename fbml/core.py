@@ -71,18 +71,16 @@ class Builder (object):
 
     def build_method(self, label, tree):
         method = model.Method(label)
-        method.make_condition('req',self.factory(tree.require,'condition'))
-        method.make_condition('ens',self.factory(tree.ensure,'condition'))
+        self.build_condition(method.ens,tree.ensure)
+        self.build_condition(method.req,tree.require)
         return method
     
-    def build_condition(self, label, tree):
-        condition = model.Condition(label)
+    def build_condition(self, condition, tree):
         for slot in tree.slots:
             def build_slot(label):
                 return util.namedtuple_from_dict('Slot', slot.data)
             condition.make_slot(slot.id, build_slot)
         self.assing_extends(tree,condition)
-        return condition
 
 
     def build_impl(self, method, tree):

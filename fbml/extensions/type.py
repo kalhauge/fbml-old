@@ -218,49 +218,6 @@ class AllowedTypes (visitors.DataFlowVisitor):
         return {slot: sinks[sink] for slot, sink in vars(impl.targets).items()}
 
 
-class TypeSetter (visitors.DataFlowVisitor):
-
-    def __init__(self,module):
-        super(TypeSetter,self).__init__()
-        self.module = module
-
-    def setup(self,method):
-        return ([(sink, sink.type) for sink in method.impl.source_sinks] +
-                [(sink, sink.type) for sink in method.impl.constant_sinks])
-
-    def apply(self,function,sink_types):
-
-        types = [(slot, sink_types[sink]) 
-                for slot, sink in function.sources.with_names]
-
-        method_name = function.data.method_name
-        
-        from .methodname import has_method_name
-        from ..util.matchers import has_targets, has_sources
-
-        #Determine method
-        method = self.module.get_method_where(
-                matchers.all_of(
-                    has_types(types),
-                    has_method_name(method_name),
-                    has_sources(function.sources.names),
-                    has_targets(function.targets.names)
-                    )
-                )
-
-        for slot, sink in function.targets.with_names:
-            try:
-                sink.data.type = method.ens.slots[slot].type
-            except AttributeError:
-                self.visit(method)
-                sink.data.type = method.ens.slots[slot].type
-            yield sink, sink.data.type
-
-    def final(self,method,sink_types):
-        for slot, sink in method.impl.target_sinks.with_names:
-            method.ens.slots[slot].type = sink.data.type
-        
-        return method
 
 class TypeExtension(Extension):
     NAME = "type"

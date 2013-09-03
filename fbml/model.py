@@ -132,19 +132,29 @@ class Method (Namespace):
 
     def __init__(self, label, impl = None):
         super(Method,self).__init__(label)
-        self.impl = impl
-
-    def make_condition(self, name, factory):
-        res = self.make(name,factory)
-        setattr(self,name,res)
-        return res 
+        self._impl = impl
+        self.req = self.make('req',Condition)
+        self.ens = self.make('ens',Condition)
 
     def __repr__(self):
         return '<method {m.label}>'.format(m=self)
 
+    def get_impl(self): return self._impl 
+
+    def set_impl(self, impl):
+        self._impl = impl
+        self.req.reset_slots()
+        self.ens.reset_slots()
+
+        for sink in impl.source_sinks:
+            self.req.make_slot(sink.slot,lambda x: sink.data)
+
+        for slot, sink in vars(impl.targets).items():
+            self.ens.make_slot(slot,lambda x: sink.data)
+
+    impl = property(get_impl,set_impl)
 
 class Condition(Namespace, Extendable):
-
     """
     Condition is the testable aspeckt of the Method
 
@@ -162,11 +172,13 @@ class Condition(Namespace, Extendable):
     def make_slot(self,slot_id, factory):
         return self.slots.make(slot_id,factory)
 
+    def reset_slots(self):
+        self.slots = self.make('slots',Namespace,True)
 
 class Impl (Namespace):
     
     """
-    Impl is the implementations of the Mehtod. It contains four major
+    Impl is the implementations of the Method. It contains four major
     subnamespaces; 'sinks', 'functions', 'target_sinks', and 'source_sinks'. 
     Theses can be used to access the sinks and functions using their ids.
 

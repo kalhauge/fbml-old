@@ -46,8 +46,11 @@ class Value(object):
     def write(self): 
         return self.type.write_str(self.value)
 
-class ValueVisitor(object):
-    pass
+class ValueSet (object):
+    
+    def __init__(self, type_, values):
+        self.type = type_
+        self.values = values
 
 class ValueExtension(Extension):
     XML_FORMATS = [ValueFormat()]

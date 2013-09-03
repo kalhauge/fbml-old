@@ -27,7 +27,7 @@ class Sink (Element):
 
     @classmethod
     def new(cls, target, data={}):
-        return cls(target, namedtuple_from_dict("Data", data))
+        return cls(target, namedtuple_from_dict("SinkData", data))
 
     @property
     def owner(self):
@@ -62,7 +62,7 @@ class Source(Sink):
     def new(cls, slot, data={}):
         return cls(
                 slot = slot,
-                data = namedtuple_from_dict("Data", data)
+                data = namedtuple_from_dict("SourceData", data)
                 )
 
     @property
@@ -87,7 +87,7 @@ class Constant(Sink):
     @classmethod
     def new(cls, data={}):
         return cls(
-                data = namedtuple_from_dict("Data", data)
+                data = namedtuple_from_dict("ConstantData", data)
                 )
 
     @property
@@ -111,7 +111,7 @@ class Function (Element):
     def new(cls, sources, data={}):
         return cls(
                 sources = namedtuple_from_dict("Sources", sources),
-                data = namedtuple_from_dict("Data", data)
+                data = namedtuple_from_dict("FunctionData", data)
                 )
 
     def depth(self,helper):

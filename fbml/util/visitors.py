@@ -1,4 +1,5 @@
 from itertools import chain
+from functools import reduce
 
 
 def calculate_runorder(impl):
@@ -73,24 +74,18 @@ class ControlFlowVisitor (object):
     def __init__(self):
         self._methods = dict()
 
-    def visit(self,method):
-        if method in self._methods:
-            return self._methods[method] 
-        runorder = calculate_runorder(method.impl)
-        result = self.setup(method)
-        for function in runorder:
-            result = self.apply(function,result)
+    def visit(self,impl, data=None):
+        runorder = calculate_runorder(impl)
+        result = reduce(self.apply, runorder, self.setup(impl, data))
+        return self.final(impl,result)
+        
 
-        ret_method = self.final(method,result)
-        self._methods[method] = ret_method
-        return ret_method
-
-    def setup(self, method):
+    def setup(self, impl, data):
         pass 
 
-    def apply(self, function,result):
+    def apply(self, function, data):
         pass
 
-    def final(self, result):
+    def final(self, impl, result):
         pass
 

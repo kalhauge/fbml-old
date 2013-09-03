@@ -69,10 +69,8 @@ class AuxilliaryTester (unittest.TestCase):
     def test_method_callable_with_types(self):
         label = MagicMock()
         method = Method(label)
-        method.make_condition('req',Condition)
         method.req.make_slot('a',lambda x: Data())
         method.req.make_slot('b',lambda x: Data())
-        method.make_condition('ens',Condition)
 
         method.req.slots['a'].type = IntegerType()
         method.req.slots['b'].type = RealType()

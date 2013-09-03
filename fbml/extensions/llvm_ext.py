@@ -2,22 +2,25 @@
 .. module:: fbml.extensions.llvm
 
 """
-
-from . import Extension
-
-from ..parsers import xmlformat
-from ..util import visitors
-
-from ..util import log_it
-
+import string
+import random
+import collections
 import xml.etree.ElementTree as ET
 
 import llvm.core as llvmc
 import llvm.ee as llvmee
 
 import logging
-
 log = logging.getLogger(__name__)
+
+from . import Extension
+
+from ..parsers import xmlformat
+from ..util import visitors
+
+from ..structure import Label
+
+from ..util import log_it
 
 class LLVMFormat(object):
     name = 'llvm'
@@ -275,7 +278,92 @@ class MethodCreater(visitors.ControlFlowVisitor):
         else:
             self.visit(method)
             return cb.call(method,function)
+
+BlockData = collections.namedtuple('Block',
+        [
+            'blocks',
+            'values',
+            'bldr',
+            ])
+
+def random_name(names):
+    blockname = None
+    while not blockname or blockname in names:
+        blockname = ''.join(
+                random.choice(string.ascii_lowercase) 
+                for _ in range(8))
+    return blockname
+
+def llvm_function_from_impl(impl, name, llvm_module):
+    """ Asumes only a single return value"""
+    target, = impl.targets
+    return llvmc.Function.new(
+            llvm_module,
+            llvmc.Type.function(llvm_type(target.data.type),
+                [llvm_type(source.data.type) for source in impl.source_sinks]
+                ),
+            name 
+            )
+
+class BlockCompiler(visitors.ControlFlowVisitor):
+
+    def __init__(self, module):
+        self.module = module
+
+    def setup(self, impl, data):
+        last_block = data.bldr.basic_block
+        block_name = random_name(data.blocks)
+        llvm_block = last_block.function.append_basic_block(block_name)
+        data.blocks[block_name] = llvm_block
         
+        data.bldr.branch(llvm_block)
+        data.bldr.position_at_end(llvm_block)
+
+        return data 
+
+    def apply(self, data, function):
+       
+        values = dict()
+        for slot, sink in vars(function.sources).items():
+            values[slot] = data.values[sink.owner][sink.slot]
+
+        methods = [Label.find(method_label,self.module)
+                        for method_label in function.data.methods]
+        if len(methods) == 1:
+            method, = methods
+            try:
+                llvm_name = method.ens.llvm
+            except AttributeError:
+                # Method is having an implenmations (we hope)
+                impl = method.impl
+                em_data = BlockData(
+                            blocks = data.blocks,
+                            values = {None: values},
+                            bldr = data.bldr,
+                            )
+                self.visit(impl,em_data)
+                data.values[function] = {slot: em_data.values[impl][slot]
+                        for slot in vars(impl.targets)}
+
+            else:
+                func = getattr(data.bldr,llvm_name) 
+                slot_name, = method.ens.slots.names
+                args = [None, None, slot_name]
+                for slot, data_ in method.req.slots.with_names:
+                    args[data_.llvm_arg] = values[slot]
+                data.values[function] = {slot_name: func(*args)}
+        else:
+            raise Exception()
+        
+        return data 
+
+    def final(self, impl, data):
+        data.values[impl] = dict()
+        for slot, sink in vars(impl.targets).items():
+            data.values[impl][slot] = data.values[sink.owner][sink.slot]
+        return data
+
+
 
 class LLVMExtension (Extension):
     NAME = 'llvm'

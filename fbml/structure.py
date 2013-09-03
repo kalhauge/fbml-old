@@ -131,7 +131,7 @@ class Namespace (object):
         """ returns the name list of the package """
         return self._label.to_name_list()
 
-    def make(self, name, child_factory):
+    def make(self, name, child_factory, force = False):
         """
         This method enables the user to register a child to a package
         :param name: The name that the child should have
@@ -139,7 +139,7 @@ class Namespace (object):
            label 
         """
         child_label = Label(name,self)
-        if name in self._children:
+        if not force and name in self._children:
             raise exceptions.BadLabelCreation(self,name)
         self._children[child_label.name] = child_factory(child_label)
         return child_label.get() 
