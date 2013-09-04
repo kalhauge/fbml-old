@@ -24,6 +24,54 @@
         </ensure>
     </method>
 
+    <method id="mult-integer">
+        <require>
+            <method_name>mult</method_name>
+            <slots>
+                <slot id="a">
+                    <type>Integer</type>
+                    <llvm_arg>0</llvm_arg>
+                </slot>
+                <slot id="b">
+                    <type>Integer</type>
+                    <llvm_arg>1</llvm_arg>
+                </slot>
+            </slots> 
+        </require>
+        <ensure>  
+            <slots>
+                <slot id="c">
+                    <type>Integer</type>
+                </slot>
+            </slots>
+            <llvm>mul</llvm>
+        </ensure>
+    </method>
+
+    <method id="gt-integer">
+        <require>
+            <method_name>gt</method_name>
+            <slots>
+                <slot id="a">
+                    <type>Integer</type>
+                    <llvm_arg>0</llvm_arg>
+                </slot>
+                <slot id="b">
+                    <type>Integer</type>
+                    <llvm_arg>1</llvm_arg>
+                </slot>
+            </slots> 
+        </require>
+        <ensure>  
+            <slots>
+                <slot id="c">
+                    <type>Boolean</type>
+                </slot>
+            </slots>
+            <llvm>gt</llvm>
+        </ensure>
+    </method>
+
     <method id="do-nothing">
         <require>
             <method_name>do_nothing</method_name>

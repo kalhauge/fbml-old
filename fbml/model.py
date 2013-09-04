@@ -30,71 +30,6 @@ Subnamespaces
 
 .. attribute:: ens
 
-
-Impl
-====
-
-.. autoclass:: fbml.model.Impl
-    :members:
-
-Subnamespaces
--------------
-
-.. attribute:: sinks
-
-.. attribute:: functions
-
-.. attribute:: source_sinks
-
-.. attribute:: target_sinks
-
-.. attribute:: constant_sinks 
-
-.. attribute:: internal_sinks 
-
-Function 
-========
-
-.. autoclass:: fbml.model.Function
-    :members:
-
-Subnamespaces
--------------
-
-.. attribute:: sources
-
-.. attribute:: targets
-
-Sink
-====
-
-.. autoclass:: fbml.model.Sink
-    :members:
-
-Subnamespaces
--------------
-
-.. attribute:: impl
-    
-    the implementaions in where the sink resides
-
-.. attribute:: target
-
-    The target is label explaining in where the sink resides. Sink that is source
-    of the method, or if they are constants, they will have the Sink as parrent the
-    label.
-
-.. attribute:: owner 
-
-    Sould be used when wanting to access the owner of the sink, this can be
-    a :class:`~fbml.model.Function` or the :class:`~fbml.model.Impl`
-
-
-.. attribute:: data 
-    
-    This is the data coresponding with the sink. Like the other extendable classes
-    these data can be accesed directly through getting the attributes. If two attributes
-    colides, the Sinks native attributes gets first priority.
 """
 
 from functools import partial
@@ -143,13 +78,15 @@ class Method (Namespace):
 
     def set_impl(self, impl):
         self._impl = impl
+
+    def update_conditions(self):
         self.req.reset_slots()
         self.ens.reset_slots()
 
-        for sink in impl.source_sinks:
+        for sink in self.impl.source_sinks:
             self.req.make_slot(sink.slot,lambda x: sink.data)
 
-        for slot, sink in vars(impl.targets).items():
+        for slot, sink in vars(self.impl.targets).items():
             self.ens.make_slot(slot,lambda x: sink.data)
 
     impl = property(get_impl,set_impl)
@@ -175,131 +112,6 @@ class Condition(Namespace, Extendable):
     def reset_slots(self):
         self.slots = self.make('slots',Namespace,True)
 
-class Impl (Namespace):
-    
-    """
-    Impl is the implementations of the Method. It contains four major
-    subnamespaces; 'sinks', 'functions', 'target_sinks', and 'source_sinks'. 
-    Theses can be used to access the sinks and functions using their ids.
-
-    The subnamespace 'sinks' Allows the user to acces the sinks by id, or
-    all of them. The same thing for the 'functions'. The 'target_sinks' and the 
-    'source_sinks' alows the user to acces sinks by the slot id of the method.
-    
-    'source_sinks' and 'target_sinks' sinks all refer to the methods slot data.
-
-    :param label: a label to identiy it in the scope
-    """
-
-    def __init__(self, label):
-        super(Impl,self).__init__(label)
-        self.sinks = self.make('sinks',Namespace)
-        self.functions = self.make('functions',Namespace)
-        self.target_sinks = self.make('target_sinks',Namespace)
-        self.source_sinks = self.make('source_sinks',Namespace)
-        self.constant_sinks = self.make('constant_sinks',Namespace)
-        self.internal_sinks = self.make('internal_sinks',Namespace)
-
-    def make_sink(self, name, factory):
-        return self.sinks.make(name, factory)
-
-    def make_function(self, name, factory):
-        return self.functions.make(name, factory)
-
-    def make_target_sink(self, name, slot, factory):
-        return self.target_sinks.make(slot,
-                lambda label: self.make_sink(name,partial(factory,label)))
-
-    def make_source_sink(self, name, slot, factory):
-        return self.source_sinks.make(slot, 
-                lambda label: self.make_sink(name,partial(factory,label)))
-
-    def make_constant_sink(self, name, factory):
-        return self.constant_sinks.make(name, 
-                lambda label: self.make_sink(name,partial(factory,label)))
-
-    def make_internal_sink(self, name, factory):
-        return self.internal_sinks.make(name, 
-                lambda label: self.make_sink(name,partial(factory,label)))
-    
-    @property
-    def method(self):
-        return self.parrent
-
-    def depth(self, helper): 
-        return 0
-
-    def __repr__(self):
-        return "<impl '{s.parrent.label.name}'>".format(s=self)
-
-
-class Function (Namespace, Extendable):
-    
-    """
-    A Function is the method call of fbml. It is posible to
-    use this to define which sinks the Methods should be run with.
-
-    The subnamesapces 'sources' and 'targets' enables the user to
-    access the sinks using the slot names of the method.
-    """
-
-    def __init__(self, label):
-        super(Function, self).__init__(label)
-        self.data = Data()
-        self.sources = self.make('sources',Namespace)
-        self.targets = self.make('targets', Namespace)
-
-    def make_target(self, slot, sink):
-        def make_sink(label):
-            sink.target = label
-            return sink
-        return self.targets.make(slot,make_sink)
-    
-    def make_source(self, slot, sink):
-        return self.sources.make(slot, lambda x : sink) 
-
-    @property
-    def impl(self):
-        return self.parrent.parrent
-
-    def __repr__(self):
-        return '<function label={f.label.name}>'.format(f=self)
-
-    def depth(self,helper):
-        if not self in helper:
-            if not self.sources: depth = 0;
-            else: depth = max(sink.depth(helper) for sink in self.sources) +1
-            helper[self] = depth;
-        return helper[self]
-
-
-class Sink (Namespace, Extendable):
-    
-    """
-    The sink contains the esential data for execution of the program and
-    is the combiner of functions
-    """
-
-    def __init__(self, label):
-        super(Sink,self).__init__(label)
-        self.data = Data()
-  
-    @property
-    def owner(self):
-        return self.target.parrent.parrent
-
-    @property
-    def impl(self):
-        return self.parrent.parrent
-
-    def __repr__(self):
-        return '<sink {s.label.name}>'.format(s=self)
-
-    def depth(self,helper):
-        if not self in helper:
-            helper[self] = self.owner.depth(helper) + 1
-        return helper[self]
-
 class Data(object):
     """ The extendable data object """
 
@@ -307,6 +119,4 @@ class Data(object):
         if not name_list:return self
         else:
             raise exceptions.BadLabelAccess('Bad access to {}'.format(name_list))
-
-
 

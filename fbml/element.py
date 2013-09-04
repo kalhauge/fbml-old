@@ -79,6 +79,11 @@ class Source(Sink):
     def __str__(self):
         return 'Source : {self.data.id!r} at {self.slot!r}'.format(**locals())
 
+    def update_data(self, data={}):
+        new_data = dict(vars(self.data))
+        new_data.update(data)
+        return self.new(self.slot,new_data)
+
 class Constant(Sink):
 
     def __init__(self, data):
@@ -99,6 +104,11 @@ class Constant(Sink):
 
     def __str__(self):
         return 'Constant : {self.data.id!r}'.format(**locals())
+
+    def update_data(self, data={}):
+        new_data = dict(vars(self.data))
+        new_data.update(data)
+        return self.new(new_data)
 
 class Target(Sink): pass
 
@@ -130,6 +140,9 @@ class Function (Element):
         new_data.update(data)
         new_sinks = {slot: sink_data[sink] for slot, sink in vars(self.sources).items()}
         return Function.new(new_sinks, new_data)
+
+    def __repr__(self):
+        return "<FUNCTION " + str(id(self)) + ">"
 
 def _get_sinks_of_type(sink_type):
     def get_sinks(self):
@@ -183,3 +196,7 @@ class Impl (Immutable):
         new_sinks = {slot: sink_data[sink] 
                 for slot, sink in vars(self.targets).items()}
         return Impl.new(new_sinks)
+
+    def __repr__(self):
+        return "<IMPL " + str(id(self)) + ">"
+

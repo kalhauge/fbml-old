@@ -13,12 +13,15 @@ import llvm.ee as llvmee
 import logging
 log = logging.getLogger(__name__)
 
+from functools import partial
+
 from . import Extension
 
 from ..parsers import xmlformat
 from ..util import visitors
 
 from ..structure import Label
+from .. import element
 
 from ..util import log_it
 
@@ -101,15 +104,24 @@ def get_llvm_types(elm):
 type_map = {
     'Integer'  : (llvmc.Type.int(),'int'),
     'Real'     : (llvmc.Type.double(),'real'),
-    #'Char'     : llvmc.Type.int(8)
+    'Boolean'  : (llvmc.Type.int(),'bool'),
 }
+
+function_map = {
+    'gt'       :  (lambda self : partial(llvmc.Builder.icmp,self,llvmc.ICMP_SGT)),
+}
+
+def llvm_function(name, bldr):
+    if hasattr(bldr,name):
+        return getattr(bldr,name)
+    else:
+        return function_map[name](bldr)
 
 def llvm_type(fbml_type):
     return type_map[fbml_type.name][0]
 
 def llvm_int(value, bit=32):
     return llvmc.Constant.int(llvmc.Type.int(bit),value)
-
 
 def llvm_constant(fbml_type, value):
     name = type_map[fbml_type.name][1]
@@ -311,13 +323,13 @@ class BlockCompiler(visitors.ControlFlowVisitor):
         self.module = module
 
     def setup(self, impl, data):
-        last_block = data.bldr.basic_block
-        block_name = random_name(data.blocks)
-        llvm_block = last_block.function.append_basic_block(block_name)
-        data.blocks[block_name] = llvm_block
-        
-        data.bldr.branch(llvm_block)
-        data.bldr.position_at_end(llvm_block)
+#        last_block = data.bldr.basic_block
+#        block_name = random_name(data.blocks)
+#        llvm_block = last_block.function.append_basic_block(block_name)
+#        data.blocks[block_name] = llvm_block
+#        
+#        data.bldr.branch(llvm_block)
+#        data.bldr.position_at_end(llvm_block)
 
         return data 
 
@@ -325,7 +337,11 @@ class BlockCompiler(visitors.ControlFlowVisitor):
        
         values = dict()
         for slot, sink in vars(function.sources).items():
-            values[slot] = data.values[sink.owner][sink.slot]
+            if isinstance(sink,element.Constant):
+                values[slot] = llvm_constant(sink.data.value.type,
+                        sink.data.value.value)
+            else:
+                values[slot] = data.values[sink.owner][sink.slot]
 
         methods = [Label.find(method_label,self.module)
                         for method_label in function.data.methods]
@@ -346,15 +362,68 @@ class BlockCompiler(visitors.ControlFlowVisitor):
                         for slot in vars(impl.targets)}
 
             else:
-                func = getattr(data.bldr,llvm_name) 
+                func = llvm_function(llvm_name, data.bldr) 
                 slot_name, = method.ens.slots.names
                 args = [None, None, slot_name]
                 for slot, data_ in method.req.slots.with_names:
                     args[data_.llvm_arg] = values[slot]
                 data.values[function] = {slot_name: func(*args)}
         else:
-            raise Exception()
-        
+            # Assume that the method should be matched.
+            matchables = set()
+            for slot, data_ in  methods[0].req.slots.with_names:
+                if hasattr(data_,'match'): 
+                    matchables.add(slot)
+            if not matchables:
+                raise Exception("Ambigues")
+            
+            match, = matchables
+            
+            true, false = (methods if methods[0].req.slots[match].match
+                        else reversed(methods))
+
+            current_block = data.bldr.basic_block
+          
+            func = data.bldr.basic_block.function
+            
+            true_block = func.append_basic_block(random_name(data.blocks))
+            false_block = func.append_basic_block(random_name(data.blocks))
+            merge_block = func.append_basic_block(random_name(data.blocks))
+
+            data.bldr.position_at_end(true_block)
+            true_data = BlockData(
+                        blocks = data.blocks,
+                        values = {None: dict(values)},
+                        bldr = data.bldr,
+                        )
+            true_data = self.visit(true.impl,true_data)
+            true_block = data.bldr.basic_block
+            data.bldr.branch(merge_block)
+            
+            data.bldr.position_at_end(false_block)
+            false_data = BlockData(
+                        blocks = data.blocks,
+                        values = {None: dict(values)},
+                        bldr = data.bldr,
+                        )
+            false_data = self.visit(false.impl,false_data)
+            false_block = data.bldr.basic_block 
+            data.bldr.branch(merge_block)
+            
+            data.bldr.position_at_end(current_block)
+            data.bldr.cbranch(values[match], true_block, false_block)
+            
+            data.bldr.position_at_end(merge_block)
+
+            merge_values = dict()
+            for slot in vars(true.impl.targets):
+                phi = data.bldr.phi(llvm_type(true.ens.slots[slot].type))
+                phi.add_incoming(true_data.values[true.impl][slot],true_block)
+                phi.add_incoming(false_data.values[false.impl][slot],false_block)
+                merge_values[slot] = phi
+
+            data.values[function] = merge_values
+
         return data 
 
     def final(self, impl, data):

@@ -83,6 +83,12 @@ class IntegerType (Type):
     def parse_str(self, string):
         return int(string)
 
+class BooleanType (Type):
+    name = 'Boolean'
+
+    def parse_str(self, string):
+        return bool(string)
+
 class CharType (Type):
     name = 'Char'
 
@@ -96,7 +102,7 @@ class RealType (Type):
         return float(string)
 
 
-Type._buildin_types = {type_.name : type_() for type_ in [IntegerType,CharType,RealType]}
+Type._buildin_types = {type_.name : type_() for type_ in [BooleanType, IntegerType,CharType,RealType]}
 
 TypeAsSlot = collections.namedtuple('TypeAsSlot', ['slot'])
 

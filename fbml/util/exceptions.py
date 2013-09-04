@@ -8,6 +8,13 @@ class BadLabelAccess (FbmlError):
                 "Bad access to {name} in {obj}".format(**locals()))
 
 
+class BadLabelCreation(FbmlError):
+
+    def __init__(self,obj, name):
+        super(BadLabelCreation,self).__init__(
+                "Bad creation to {name} in {obj}".format(**locals()))
+
+
 class AmbiguousMethodCall(FbmlError):
 
     def __init__(self,methods,condition):

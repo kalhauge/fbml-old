@@ -1,5 +1,5 @@
 """
-.. module:: fbml.extensions.value
+.. currentmodule:: fbml.extensions.value
 .. moduleauthor:: Christian Gram Kalhauge <s093273@student.dtu.dk>
 
 """
@@ -7,7 +7,10 @@
 import logging
 log = logging.getLogger(__name__)
 
+
 from . import Extension
+
+from ..util import visitors
 
 class ValueFormat (object):
     name = 'value'
@@ -46,11 +49,26 @@ class Value(object):
     def write(self): 
         return self.type.write_str(self.value)
 
-class ValueSet (object):
-    
-    def __init__(self, type_, values):
-        self.type = type_
-        self.values = values
+class ValueFinder(visitors.DataFlowVisitor):
+
+    def __init__(self, module):
+        self.module = module
+
+    def setup(self, sink, impl):
+        if hasattr(sink.data, 'value'):
+            if isinstance(sink.data.value, ValueFactory):
+                return sink.update_data({'value': 
+                    sink.data.value.get_value(sink.data.type)})
+        return sink
+
+    def merge(self, sink, function):
+        return sink.update_data(function)
+
+    def apply(self, function, sinks):
+        return function.update_data(sinks)
+
+    def final(self, impl, functions, sinks):
+        return impl.update_data(sinks)
 
 class ValueExtension(Extension):
     XML_FORMATS = [ValueFormat()]

@@ -15,7 +15,7 @@ import logging
 log = logging.getLogger('fbml.structure')
 
 from .util import readonly
-from .util import exceptions
+from .util.exceptions import BadLabelCreation, BadLabelAccess 
 
 class Label (object):
     """
@@ -59,7 +59,7 @@ class Label (object):
         name_list = label_string.split('.')
         try:
             return package.find_from_name_list(name_list)
-        except exceptions.BadLabelAccess:
+        except BadLabelAccess:
             return package.root().find_from_name_list(name_list)
 
             
@@ -91,7 +91,7 @@ class Namespace (object):
         if not name_list: return self.label
         try:
             subpackage = self.find(name_list[0])
-        except exceptions.BadLabelAccess:
+        except BadLabelAccess:
             log.debug("Subpackage %s not found, try to create",
                     name_list[0])
             subpackage = self.make(name_list[0],factory)
@@ -106,7 +106,7 @@ class Namespace (object):
         try:
             return self.children[name]
         except KeyError:
-            raise exceptions.BadLabelAccess(self,name)
+            raise BadLabelAccess(self,name)
 
     def find_from_name_list(self, name_list):
         """ Returns the label, by searching through the structure tree
@@ -140,7 +140,7 @@ class Namespace (object):
         """
         child_label = Label(name,self)
         if not force and name in self._children:
-            raise exceptions.BadLabelCreation(self,name)
+            raise BadLabelCreation(self,name)
         self._children[child_label.name] = child_factory(child_label)
         return child_label.get() 
 
